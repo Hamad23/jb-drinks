@@ -1,0 +1,1300 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#0b0f19">
+    <title>JB Drinks — Mobile Inventory & Sales Tracker</title>
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                screens: { 'xs': '380px', 'sm': '640px', 'md': '768px', 'lg': '1024px', 'xl': '1280px' },
+                extend: {
+                    colors: {
+                        brand: {
+                            500: '#2563eb', 600: '#1d4ed8', 700: '#1e40af', 900: '#0f172a',
+                            darkBg: '#0b0f19', cardBg: '#151c2c', cardBorder: '#232d42'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Font Awesome Icons & Inter Font -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        :root { --header-h: 52px; }
+
+        /* No horizontal page scroll ("clip" keeps position:sticky working) */
+        html, body { overflow-x: clip; }
+        @supports not (overflow: clip) { html, body { overflow-x: hidden; } }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+            overscroll-behavior-y: none;
+            touch-action: manipulation;
+        }
+
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* Header + tabs stick to the top of the page */
+        #appHeader { top: 0; }
+        #tabsBar   { top: var(--header-h); z-index: 20; }
+
+        /* Compact / wide layout switching */
+        #desktopActions { display: none; }
+        .wide-ui #desktopActions { display: flex; }
+        #mobileActions { display: flex; }
+        .wide-ui #mobileActions { display: none; }
+
+        #bottomNav {
+            position: fixed; left: 0; right: 0; bottom: 0; display: flex;
+            padding-bottom: env(safe-area-inset-bottom, 0px);
+            user-select: none; -webkit-user-select: none;
+        }
+        .wide-ui #bottomNav { display: none; }
+
+        /* 16px inputs stop iOS Safari auto-zoom on focus */
+        .compact-ui input:not([type="file"]), .compact-ui select { font-size: 16px !important; }
+
+        /* KPI grid adapts to any width */
+        .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(9.25rem, 1fr)); gap: 0.5rem; }
+        .compact-ui .kpi-wide { grid-column: 1 / -1; }
+
+        /* Clearance for fixed mobile nav */
+        .safe-pb { padding-bottom: calc(5.25rem + env(safe-area-inset-bottom, 0px)); }
+
+        /* Lock page scroll while a modal is open */
+        html.modal-open { overflow: hidden; }
+
+        /* Modal bottom sheets */
+        .modal-sheet {
+            max-height: 92vh;
+            padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+            overscroll-behavior: contain;
+        }
+        @supports (height: 100dvh) { .modal-sheet { max-height: 92dvh; } }
+
+        /* Toasts sit below the sticky header */
+        #toastContainer { top: calc(var(--header-h) + 0.5rem); }
+
+        @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .animate-slide-up { animation: slideUp .25s cubic-bezier(.16,1,.3,1) forwards; }
+
+        .tab-btn { color: #94a3b8; }
+        .tab-btn:hover { color: #e2e8f0; }
+        .tab-btn.active-tab { background: #2563eb; color: #fff; }
+    </style>
+
+    <script>
+        // Set layout mode before first paint
+        (function () {
+            var el = document.documentElement;
+            if (window.innerWidth >= 768) el.classList.add('wide-ui');
+            else el.classList.add('compact-ui');
+        })();
+    </script>
+</head>
+
+<body class="bg-[#070a11] text-slate-100 min-h-screen selection:bg-blue-500 selection:text-white">
+
+    <!-- MAIN WRAPPER -->
+    <div id="appViewportFrame" class="transition-all duration-300 bg-[#0b0f19] min-h-screen safe-pb relative">
+
+        <header id="appHeader" class="sticky z-30 bg-[#151c2c]/95 backdrop-blur-md border-b border-[#232d42] px-3 py-2.5 sm:px-6">
+            <div class="max-w-7xl mx-auto flex items-center justify-between gap-2">
+
+                <!-- Triple-tap logo to toggle cost visibility -->
+                <div onclick="handleSecretCostToggle()" class="flex items-center gap-2.5 min-w-0 cursor-pointer select-none group" title="Tap 3 times to toggle cost privacy">
+                    <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center text-white font-black text-lg shadow-md shadow-blue-500/20 shrink-0 group-active:scale-95 transition-transform">
+                        <i class="fa-solid fa-wine-bottle"></i>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <div class="flex items-center gap-1.5 flex-wrap">
+                            <h1 class="text-base sm:text-lg font-bold tracking-tight text-white leading-tight">JB Drinks</h1>
+                            <span class="text-[10px] bg-blue-500/20 text-blue-400 font-semibold px-1.5 py-0.5 rounded border border-blue-500/30">Local Store</span>
+                            <span id="secretLockBadge" class="hidden text-[10px] bg-emerald-500/20 text-emerald-400 font-semibold px-1.5 py-0.5 rounded border border-emerald-500/30"><i class="fa-solid fa-eye text-[9px] mr-0.5"></i> Costs Unlocked</span>
+                        </div>
+                        <p class="text-[10px] sm:text-[11px] text-slate-400 leading-tight truncate">Jutt Brothers Drinks • Product & Sales Tracker</p>
+                    </div>
+                </div>
+
+                <!-- Desktop / tablet quick actions -->
+                <div id="desktopActions" class="items-center gap-2">
+                    <button onclick="openSaleModal()" class="bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-medium text-xs px-3 py-2 rounded-lg transition-all flex items-center gap-1.5 shadow-sm">
+                        <i class="fa-solid fa-cart-shopping"></i> + Sale
+                    </button>
+                    <button onclick="openExpenseModal()" class="bg-amber-600 hover:bg-amber-500 active:scale-95 text-white font-medium text-xs px-3 py-2 rounded-lg transition-all flex items-center gap-1.5 shadow-sm">
+                        <i class="fa-solid fa-receipt"></i> + Expense
+                    </button>
+                    <button onclick="openProductModal()" class="bg-blue-600 hover:bg-blue-500 active:scale-95 text-white font-medium text-xs px-3 py-2 rounded-lg transition-all flex items-center gap-1.5 shadow-sm">
+                        <i class="fa-solid fa-plus"></i> + Add Item
+                    </button>
+                    <button onclick="openBackupModal()" class="bg-slate-700 hover:bg-slate-600 text-slate-200 font-medium text-xs px-2.5 py-2 rounded-lg transition-all" title="Backup / Restore">
+                        <i class="fa-solid fa-database"></i>
+                    </button>
+                </div>
+
+                <!-- Mobile header actions -->
+                <div id="mobileActions" class="items-center gap-1.5">
+                    <button onclick="openBackupModal()" class="p-2.5 text-slate-300 hover:text-white active:bg-slate-700 bg-[#1e293b] rounded-lg border border-[#334155] text-xs" title="Backup / Restore">
+                        <i class="fa-solid fa-database"></i>
+                    </button>
+                    <button onclick="openSaleModal()" class="bg-emerald-600 active:bg-emerald-700 active:scale-95 text-white font-semibold text-xs px-3 py-2.5 rounded-lg flex items-center gap-1 shadow-sm">
+                        <i class="fa-solid fa-cart-shopping"></i> + Sale
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <main class="max-w-7xl mx-auto px-3 py-3 sm:px-6 sm:py-5 space-y-3.5">
+
+            <!-- KPI SUMMARY -->
+            <section class="kpi-grid">
+                <div class="bg-[#151c2c] border border-[#232d42] rounded-xl p-2.5 sm:p-3 flex flex-col justify-between shadow-sm relative overflow-hidden">
+                    <div class="flex items-center justify-between text-slate-400 text-[10px] sm:text-xs font-semibold tracking-wide">
+                        <span>TODAY SALES</span>
+                        <i class="fa-solid fa-cash-register text-blue-400 text-xs sm:text-sm"></i>
+                    </div>
+                    <div class="mt-1.5">
+                        <p id="kpiTodaySales" class="text-sm sm:text-lg font-extrabold text-white break-words">PKR 0</p>
+                        <p id="kpiTodayItems" class="text-[10px] sm:text-[11px] text-slate-400 mt-0.5 break-words">0 items sold</p>
+                    </div>
+                    <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500"></div>
+                </div>
+
+                <div class="bg-[#151c2c] border border-[#232d42] rounded-xl p-2.5 sm:p-3 flex flex-col justify-between shadow-sm relative overflow-hidden">
+                    <div class="flex items-center justify-between text-slate-400 text-[10px] sm:text-xs font-semibold tracking-wide">
+                        <span>UDHAR KHATA</span>
+                        <i class="fa-solid fa-hand-holding-dollar text-amber-400 text-xs sm:text-sm"></i>
+                    </div>
+                    <div class="mt-1.5">
+                        <p id="kpiPendingUdhar" class="text-sm sm:text-lg font-extrabold text-amber-400 break-words">PKR 0</p>
+                        <p id="kpiUdharEntries" class="text-[10px] sm:text-[11px] text-slate-400 mt-0.5 break-words">0 unpaid entries</p>
+                    </div>
+                    <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-amber-500"></div>
+                </div>
+
+                <div class="bg-[#151c2c] border border-[#232d42] rounded-xl p-2.5 sm:p-3 flex flex-col justify-between shadow-sm relative overflow-hidden">
+                    <div class="flex items-center justify-between text-slate-400 text-[10px] sm:text-xs font-semibold tracking-wide">
+                        <span>TODAY PROFIT</span>
+                        <i class="fa-solid fa-chart-line text-emerald-400 text-xs sm:text-sm"></i>
+                    </div>
+                    <div class="mt-1.5">
+                        <p id="kpiTodayProfit" class="text-sm sm:text-lg font-extrabold text-emerald-400 break-words">PKR 0</p>
+                        <p id="kpiMargin" class="text-[10px] sm:text-[11px] text-slate-400 mt-0.5 break-words">Margin: 0%</p>
+                    </div>
+                    <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-500"></div>
+                </div>
+
+                <div class="bg-[#151c2c] border border-[#232d42] rounded-xl p-2.5 sm:p-3 flex flex-col justify-between shadow-sm relative overflow-hidden">
+                    <div class="flex items-center justify-between text-slate-400 text-[10px] sm:text-xs font-semibold tracking-wide">
+                        <span>TOTAL STOCK</span>
+                        <i class="fa-solid fa-boxes-stacked text-purple-400 text-xs sm:text-sm"></i>
+                    </div>
+                    <div class="mt-1.5">
+                        <p id="kpiTotalStock" class="text-sm sm:text-lg font-extrabold text-white break-words">0 Units</p>
+                        <p id="kpiLowStock" class="text-[10px] sm:text-[11px] text-red-400 mt-0.5 font-medium break-words">Low Stock: 0</p>
+                    </div>
+                    <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-purple-500"></div>
+                </div>
+
+                <div class="kpi-wide bg-[#151c2c] border border-[#232d42] rounded-xl p-2.5 sm:p-3 flex flex-col justify-between shadow-sm relative overflow-hidden">
+                    <div class="flex items-center justify-between text-slate-400 text-[10px] sm:text-xs font-semibold tracking-wide">
+                        <span>STOCK VALUE</span>
+                        <i class="fa-solid fa-warehouse text-cyan-400 text-xs sm:text-sm"></i>
+                    </div>
+                    <div class="mt-1.5">
+                        <p id="kpiStockValue" class="text-sm sm:text-lg font-extrabold text-cyan-300 break-words">PKR 0</p>
+                        <p class="text-[10px] sm:text-[11px] text-slate-400 mt-0.5 break-words">Buying cost in shop</p>
+                    </div>
+                    <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-cyan-500"></div>
+                </div>
+            </section>
+
+            <!-- Sticky tab bar -->
+            <div id="tabsBar">
+                <div class="border border-[#232d42] bg-[#151c2c]/95 backdrop-blur-md p-1 rounded-xl shadow-md">
+                    <nav class="flex overflow-x-auto space-x-1 no-scrollbar" aria-label="Tabs">
+                        <button onclick="switchTab('inventory')" id="tab-inventory" class="tab-btn active-tab px-3 py-2 text-xs font-semibold rounded-lg shrink-0 flex items-center gap-1.5 transition-all">
+                            <i class="fa-solid fa-boxes-packing"></i> Products
+                        </button>
+                        <button onclick="switchTab('sales')" id="tab-sales" class="tab-btn px-3 py-2 text-xs font-semibold rounded-lg shrink-0 flex items-center gap-1.5 transition-all">
+                            <i class="fa-solid fa-receipt"></i> Sales Log
+                        </button>
+                        <button onclick="switchTab('udhar')" id="tab-udhar" class="tab-btn px-3 py-2 text-xs font-semibold rounded-lg shrink-0 flex items-center gap-1.5 transition-all relative">
+                            <i class="fa-solid fa-book-bookmark"></i> Udhar Khata
+                            <span id="udharBadge" class="hidden ml-1 px-1.5 py-0.5 bg-amber-500/30 text-amber-300 text-[10px] rounded-full border border-amber-500/40 font-bold">0</span>
+                        </button>
+                        <button onclick="switchTab('expenses')" id="tab-expenses" class="tab-btn px-3 py-2 text-xs font-semibold rounded-lg shrink-0 flex items-center gap-1.5 transition-all">
+                            <i class="fa-solid fa-file-invoice-dollar"></i> Expenses
+                        </button>
+                        <button onclick="switchTab('reports')" id="tab-reports" class="tab-btn px-3 py-2 text-xs font-semibold rounded-lg shrink-0 flex items-center gap-1.5 transition-all">
+                            <i class="fa-solid fa-chart-pie"></i> Reports
+                        </button>
+                    </nav>
+                </div>
+            </div>
+
+            <section id="view-inventory" class="tab-content hidden space-y-3">
+                <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 bg-[#151c2c] p-2.5 rounded-xl border border-[#232d42]">
+                    <div class="relative flex-1">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                        <input type="text" id="searchInventory" oninput="renderInventory()" placeholder="Search product..." class="w-full bg-[#0b0f19] border border-[#232d42] rounded-lg pl-8 pr-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500 transition-colors">
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <select id="filterCategory" onchange="renderInventory()" class="bg-[#0b0f19] border border-[#232d42] rounded-lg px-2.5 py-2 text-xs text-slate-300 focus:outline-none focus:border-blue-500 flex-1 sm:flex-none">
+                            <option value="all">All Items</option>
+                            <option value="low">Low Stock</option>
+                            <option value="out">Out of Stock</option>
+                        </select>
+                        <button onclick="openProductModal()" class="bg-blue-600 active:bg-blue-700 text-white font-medium text-xs px-3 py-2.5 rounded-lg transition-all flex items-center gap-1 shrink-0">
+                            <i class="fa-solid fa-plus"></i> Item
+                        </button>
+                    </div>
+                </div>
+                <div id="inventoryContainer" class="space-y-2"></div>
+            </section>
+
+            <section id="view-sales" class="tab-content hidden space-y-3">
+                <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 bg-[#151c2c] p-2.5 rounded-xl border border-[#232d42]">
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <span class="text-xs text-slate-400 font-medium">Filter Date:</span>
+                        <input type="date" id="filterSaleDate" onchange="renderSales()" class="bg-[#0b0f19] border border-[#232d42] rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500">
+                        <button onclick="resetSaleDateFilter()" class="text-xs text-blue-400 hover:text-blue-300 underline py-1">All Dates</button>
+                    </div>
+                    <button onclick="openSaleModal()" class="bg-emerald-600 active:bg-emerald-700 text-white font-semibold text-xs px-3 py-2.5 rounded-lg transition-all flex items-center justify-center gap-1">
+                        <i class="fa-solid fa-cart-plus"></i> Record Sale
+                    </button>
+                </div>
+                <div id="salesContainer" class="space-y-2"></div>
+            </section>
+
+            <section id="view-udhar" class="tab-content hidden space-y-3">
+                <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 bg-[#151c2c] p-2.5 rounded-xl border border-[#232d42]">
+                    <div class="relative flex-1">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                        <input type="text" id="searchUdhar" oninput="renderUdhar()" placeholder="Search customer name or phone..." class="w-full bg-[#0b0f19] border border-[#232d42] rounded-lg pl-8 pr-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 transition-colors">
+                    </div>
+                    <select id="filterUdharStatus" onchange="renderUdhar()" class="bg-[#0b0f19] border border-[#232d42] rounded-lg px-2.5 py-2 text-xs text-slate-300 focus:outline-none">
+                        <option value="unpaid">Unpaid Only</option>
+                        <option value="cleared">Cleared Only</option>
+                        <option value="all">All Records</option>
+                    </select>
+                </div>
+                <div id="udharContainer" class="space-y-2"></div>
+            </section>
+
+            <section id="view-expenses" class="tab-content hidden space-y-3">
+                <div class="flex items-center justify-between bg-[#151c2c] p-2.5 rounded-xl border border-[#232d42]">
+                    <h3 class="text-xs font-bold text-white flex items-center gap-1.5">
+                        <i class="fa-solid fa-file-invoice-dollar text-amber-400"></i> Operating Expenses
+                    </h3>
+                    <button onclick="openExpenseModal()" class="bg-amber-600 active:bg-amber-700 text-white font-medium text-xs px-3 py-2 rounded-lg transition-all flex items-center gap-1">
+                        <i class="fa-solid fa-plus"></i> Expense
+                    </button>
+                </div>
+                <div id="expensesContainer" class="space-y-2"></div>
+            </section>
+
+            <section id="view-reports" class="tab-content hidden space-y-3">
+                <div class="bg-[#151c2c] p-2.5 rounded-xl border border-[#232d42] flex items-center justify-between gap-2">
+                    <span class="text-xs font-bold text-slate-300">Timeframe:</span>
+                    <select id="reportPeriod" onchange="renderReports()" class="bg-[#0b0f19] border border-[#232d42] rounded-lg px-2.5 py-1.5 text-xs text-blue-400 font-semibold focus:outline-none">
+                        <option value="today">Today</option>
+                        <option value="yesterday">Yesterday</option>
+                        <option value="last7">Last 7 Days</option>
+                        <option value="thisMonth">This Month</option>
+                        <option value="all">All Time</option>
+                    </select>
+                </div>
+
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    <div class="bg-[#151c2c] border border-[#232d42] p-2.5 rounded-xl">
+                        <p class="text-[10px] text-slate-400 font-medium uppercase">TOTAL REVENUE</p>
+                        <p id="repRevenue" class="text-sm sm:text-base font-bold text-white mt-1 break-words">PKR 0</p>
+                    </div>
+                    <div class="bg-[#151c2c] border border-[#232d42] p-2.5 rounded-xl">
+                        <p class="text-[10px] text-slate-400 font-medium uppercase">COGS COST</p>
+                        <p id="repCOGS" class="text-sm sm:text-base font-bold text-slate-300 mt-1 break-words">PKR 0</p>
+                    </div>
+                    <div class="bg-[#151c2c] border border-[#232d42] p-2.5 rounded-xl">
+                        <p class="text-[10px] text-slate-400 font-medium uppercase">EXPENSES</p>
+                        <p id="repExpenses" class="text-sm sm:text-base font-bold text-amber-400 mt-1 break-words">PKR 0</p>
+                    </div>
+                    <div class="bg-[#151c2c] border border-[#232d42] p-2.5 rounded-xl">
+                        <p class="text-[10px] text-slate-400 font-medium uppercase">NET PROFIT</p>
+                        <p id="repNetProfit" class="text-sm sm:text-base font-extrabold text-emerald-400 mt-1 break-words">PKR 0</p>
+                    </div>
+                </div>
+
+                <div class="bg-[#151c2c] rounded-xl border border-[#232d42] p-3 space-y-2.5">
+                    <h4 class="text-xs font-bold text-slate-200 uppercase tracking-wider">Top Product Performance</h4>
+                    <div id="reportItemBreakdown" class="space-y-2"></div>
+                </div>
+            </section>
+
+        </main>
+
+        <!-- Mobile bottom action bar -->
+        <div id="bottomNav" class="bg-[#151c2c]/95 backdrop-blur-md border-t border-[#232d42] z-30 px-2 pt-1.5 items-center justify-around shadow-lg">
+            <button onclick="openSaleModal()" class="flex flex-col items-center gap-0.5 px-3 py-1 text-emerald-400 active:scale-95 transition-transform">
+                <div class="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                    <i class="fa-solid fa-cart-shopping text-xs"></i>
+                </div>
+                <span class="text-[10px] font-medium">New Sale</span>
+            </button>
+            <button onclick="openExpenseModal()" class="flex flex-col items-center gap-0.5 px-3 py-1 text-amber-400 active:scale-95 transition-transform">
+                <div class="w-8 h-8 rounded-full bg-amber-500/20 flex items-center justify-center">
+                    <i class="fa-solid fa-receipt text-xs"></i>
+                </div>
+                <span class="text-[10px] font-medium">Expense</span>
+            </button>
+            <button onclick="openProductModal()" class="flex flex-col items-center gap-0.5 px-3 py-1 text-blue-400 active:scale-95 transition-transform">
+                <div class="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center">
+                    <i class="fa-solid fa-plus text-xs"></i>
+                </div>
+                <span class="text-[10px] font-medium">+ Item</span>
+            </button>
+            <button onclick="switchTab('udhar')" class="flex flex-col items-center gap-0.5 px-3 py-1 text-slate-300 active:scale-95 transition-transform">
+                <div class="w-8 h-8 rounded-full bg-slate-700/60 flex items-center justify-center">
+                    <i class="fa-solid fa-book-bookmark text-xs"></i>
+                </div>
+                <span class="text-[10px] font-medium">Udhar</span>
+            </button>
+        </div>
+
+    </div>
+
+    <!-- MODAL 1: RECORD SALE -->
+    <div id="saleModal" class="modal-overlay fixed inset-0 bg-black/80 z-50 hidden backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div class="modal-sheet bg-[#151c2c] border-t sm:border border-[#232d42] w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl p-4 space-y-3 overflow-y-auto animate-slide-up">
+            <div class="sm:hidden w-10 h-1 bg-slate-600 rounded-full mx-auto mb-1"></div>
+            <div class="flex items-center justify-between border-b border-[#232d42] pb-2.5">
+                <h3 class="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-cart-shopping text-emerald-400"></i> Record Drink Sale
+                </h3>
+                <button onclick="closeModal('saleModal')" class="text-slate-400 hover:text-white p-2 -mr-1">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <form id="saleForm" onsubmit="handleSaleSubmit(event)" class="space-y-3">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Select Drink / Product *</label>
+                    <select id="saleProductId" required onchange="onSaleProductChange()" class="w-full bg-[#0b0f19] border border-[#232d42] rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-emerald-500"></select>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2.5">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">Quantity *</label>
+                        <input type="number" inputmode="numeric" id="saleQty" min="1" value="1" required oninput="updateSalePricePreview()" class="w-full bg-[#0b0f19] border border-[#232d42] rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-emerald-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">Unit Price (PKR) *</label>
+                        <input type="number" inputmode="decimal" id="saleUnitPrice" min="0" required oninput="updateSalePricePreview()" class="w-full bg-[#0b0f19] border border-[#232d42] rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-emerald-500">
+                    </div>
+                </div>
+
+                <div class="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-2.5 flex items-center justify-between text-xs">
+                    <span class="text-slate-300 font-medium">Total Bill:</span>
+                    <span id="saleTotalPreview" class="text-sm font-extrabold text-emerald-400">PKR 0</span>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Payment Method</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button type="button" id="payTypeCash" onclick="setPaymentType('cash')" class="w-full py-2.5 text-xs font-bold rounded-lg border border-emerald-500 bg-emerald-500/20 text-emerald-300 transition-all">
+                            <i class="fa-solid fa-money-bill-wave mr-1"></i> Cash
+                        </button>
+                        <button type="button" id="payTypeUdhar" onclick="setPaymentType('udhar')" class="w-full py-2.5 text-xs font-bold rounded-lg border border-[#232d42] bg-[#0b0f19] text-slate-400 transition-all">
+                            <i class="fa-solid fa-hand-holding-dollar mr-1"></i> Udhar
+                        </button>
+                    </div>
+                </div>
+
+                <div id="udharCustomerFields" class="hidden space-y-2 bg-[#0b0f19] p-3 rounded-lg border border-amber-500/30">
+                    <p class="text-[11px] font-semibold text-amber-400"><i class="fa-solid fa-user-pen mr-1"></i> Customer Udhar Info</p>
+                    <input type="text" id="udharCustomerName" placeholder="Customer Name *" class="w-full bg-[#151c2c] border border-[#232d42] rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-amber-500">
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="tel" id="udharCustomerPhone" placeholder="Phone Number" class="w-full bg-[#151c2c] border border-[#232d42] rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-amber-500">
+                        <input type="text" id="udharCustomerAddress" placeholder="Address/Shop" class="w-full bg-[#151c2c] border border-[#232d42] rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-amber-500">
+                    </div>
+                </div>
+
+                <div class="pt-2">
+                    <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 active:scale-[.98] text-white font-bold py-3 text-xs rounded-lg transition-all shadow-md">
+                        Confirm & Save Sale
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 2: ADD / EDIT PRODUCT -->
+    <div id="productModal" class="modal-overlay fixed inset-0 bg-black/80 z-50 hidden backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div class="modal-sheet bg-[#151c2c] border-t sm:border border-[#232d42] w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl p-4 space-y-3 overflow-y-auto animate-slide-up">
+            <div class="sm:hidden w-10 h-1 bg-slate-600 rounded-full mx-auto mb-1"></div>
+            <div class="flex items-center justify-between border-b border-[#232d42] pb-2.5">
+                <h3 id="productModalTitle" class="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-box text-blue-400"></i> Add New Product
+                </h3>
+                <button onclick="closeModal('productModal')" class="text-slate-400 hover:text-white p-2 -mr-1">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <form id="productForm" onsubmit="handleProductSubmit(event)" class="space-y-3">
+                <input type="hidden" id="prodEditId" value="">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Product / Drink Name *</label>
+                    <input type="text" id="prodName" required placeholder="e.g. Pepsi 1.5L Bottle" class="w-full bg-[#0b0f19] border border-[#232d42] rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-blue-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Buying Cost (PKR) *</label>
+                    <input type="number" inputmode="decimal" id="prodCostPrice" min="0" required placeholder="130" class="w-full bg-[#0b0f19] border border-[#232d42] rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-blue-500">
+                </div>
+                <div class="grid grid-cols-2 gap-2.5">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">Stock Quantity *</label>
+                        <input type="number" inputmode="numeric" id="prodStock" min="0" required placeholder="24" class="w-full bg-[#0b0f19] border border-[#232d42] rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">Low Stock Alert Level</label>
+                        <input type="number" inputmode="numeric" id="prodMinStock" min="1" value="5" required class="w-full bg-[#0b0f19] border border-[#232d42] rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-blue-500">
+                    </div>
+                </div>
+                <div class="pt-2">
+                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 active:scale-[.98] text-white font-bold py-3 text-xs rounded-lg transition-all shadow-md">Save Item</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 3: RESTOCK PRODUCT -->
+    <div id="restockModal" class="modal-overlay fixed inset-0 bg-black/80 z-50 hidden backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div class="modal-sheet bg-[#151c2c] border-t sm:border border-[#232d42] w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl p-4 space-y-3 overflow-y-auto animate-slide-up">
+            <div class="sm:hidden w-10 h-1 bg-slate-600 rounded-full mx-auto mb-1"></div>
+            <div class="flex items-center justify-between border-b border-[#232d42] pb-2.5">
+                <h3 class="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-truck-ramp-box text-purple-400"></i> Quick Restock Item
+                </h3>
+                <button onclick="closeModal('restockModal')" class="text-slate-400 hover:text-white p-2 -mr-1">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <form id="restockForm" onsubmit="handleRestockSubmit(event)" class="space-y-3">
+                <input type="hidden" id="restockProdId">
+                <div class="bg-[#0b0f19] p-2.5 rounded-lg border border-[#232d42]">
+                    <p id="restockProdName" class="font-bold text-white text-xs"></p>
+                    <p id="restockCurrentStock" class="text-[11px] text-slate-400 mt-0.5"></p>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Add Units Quantity *</label>
+                    <input type="number" inputmode="numeric" id="restockAddQty" min="1" required placeholder="e.g. 24" class="w-full bg-[#0b0f19] border border-[#232d42] rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-purple-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">New Wholesale Buying Cost (Optional)</label>
+                    <input type="number" inputmode="decimal" id="restockNewCost" placeholder="Leave blank if unchanged" class="w-full bg-[#0b0f19] border border-[#232d42] rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-purple-500">
+                </div>
+                <div class="pt-2">
+                    <button type="submit" class="w-full bg-purple-600 hover:bg-purple-500 active:scale-[.98] text-white font-bold py-3 text-xs rounded-lg transition-all shadow-md">Update Inventory Stock</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 4: RECORD EXPENSE -->
+    <div id="expenseModal" class="modal-overlay fixed inset-0 bg-black/80 z-50 hidden backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div class="modal-sheet bg-[#151c2c] border-t sm:border border-[#232d42] w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl p-4 space-y-3 overflow-y-auto animate-slide-up">
+            <div class="sm:hidden w-10 h-1 bg-slate-600 rounded-full mx-auto mb-1"></div>
+            <div class="flex items-center justify-between border-b border-[#232d42] pb-2.5">
+                <h3 class="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-receipt text-amber-400"></i> Record Shop Expense
+                </h3>
+                <button onclick="closeModal('expenseModal')" class="text-slate-400 hover:text-white p-2 -mr-1">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <form id="expenseForm" onsubmit="handleExpenseSubmit(event)" class="space-y-3">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Expense Title / Category *</label>
+                    <input type="text" id="expTitle" required placeholder="e.g. Daily Ice Block, Electricity, Fuel" class="w-full bg-[#0b0f19] border border-[#232d42] rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-amber-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Amount Spent (PKR) *</label>
+                    <input type="number" inputmode="decimal" id="expAmount" min="1" required placeholder="300" class="w-full bg-[#0b0f19] border border-[#232d42] rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-amber-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Notes / Description</label>
+                    <input type="text" id="expNote" placeholder="Optional notes" class="w-full bg-[#0b0f19] border border-[#232d42] rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-amber-500">
+                </div>
+                <div class="pt-2">
+                    <button type="submit" class="w-full bg-amber-600 hover:bg-amber-500 active:scale-[.98] text-white font-bold py-3 text-xs rounded-lg transition-all shadow-md">Save Expense Entry</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 5: DATA BACKUP / RESTORE -->
+    <div id="backupModal" class="modal-overlay fixed inset-0 bg-black/80 z-50 hidden backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div class="modal-sheet bg-[#151c2c] border-t sm:border border-[#232d42] w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl p-4 space-y-3 overflow-y-auto animate-slide-up">
+            <div class="sm:hidden w-10 h-1 bg-slate-600 rounded-full mx-auto mb-1"></div>
+            <div class="flex items-center justify-between border-b border-[#232d42] pb-2.5">
+                <h3 class="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-database text-blue-400"></i> Backup & Restore Data
+                </h3>
+                <button onclick="closeModal('backupModal')" class="text-slate-400 hover:text-white p-2 -mr-1">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <div class="space-y-3 text-xs">
+                <p class="text-slate-300">Save a backup copy of your shop inventory, sales, and Udhar records to your phone or computer.</p>
+                <button onclick="exportDataJSON()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-download"></i> Export Data Backup (JSON)
+                </button>
+                <div class="border-t border-[#232d42] pt-3">
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Restore Data File</label>
+                    <input type="file" id="importFile" accept=".json" class="w-full text-xs text-slate-400 file:mr-2 file:py-2.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-700 file:text-white hover:file:bg-slate-600">
+                    <button onclick="importDataJSON()" class="w-full mt-2 bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold py-2.5 rounded-lg">
+                        <i class="fa-solid fa-upload mr-1"></i> Restore Selected File
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CUSTOM CONFIRM DIALOG -->
+    <div id="confirmModal" class="modal-overlay fixed inset-0 bg-black/80 z-50 hidden backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div class="modal-sheet bg-[#151c2c] border-t sm:border border-[#232d42] w-full sm:max-w-sm rounded-t-2xl sm:rounded-2xl p-4 space-y-3 animate-slide-up">
+            <div class="sm:hidden w-10 h-1 bg-slate-600 rounded-full mx-auto mb-1"></div>
+            <div class="text-center py-2 space-y-1">
+                <div class="w-10 h-10 bg-amber-500/20 text-amber-400 rounded-full flex items-center justify-center mx-auto text-lg mb-2">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                </div>
+                <h4 id="confirmTitle" class="text-sm font-bold text-white">Confirm Action</h4>
+                <p id="confirmMessage" class="text-xs text-slate-300"></p>
+            </div>
+            <div class="grid grid-cols-2 gap-2 pt-2">
+                <button onclick="closeModal('confirmModal')" class="bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold py-3 text-xs rounded-lg">Cancel</button>
+                <button id="confirmExecuteBtn" class="bg-red-600 hover:bg-red-500 text-white font-bold py-3 text-xs rounded-lg">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOASTS -->
+    <div id="toastContainer" class="fixed right-3 left-3 sm:left-auto sm:right-4 z-[60] space-y-2 max-w-xs w-full mx-auto sm:mx-0 pointer-events-none"></div>
+
+    <script>
+        /* ============================================================
+           STATE & STORAGE
+        ============================================================ */
+        const STORAGE_KEY = 'jb_drinks_inventory_data_v3';
+
+        const DEFAULT_STATE = {
+            products: [
+                { id: 'p1', name: 'Pepsi 1.5 Litre Bottle', costPrice: 130, stock: 48, minStock: 10 },
+                { id: 'p2', name: 'Coca Cola 500ml', costPrice: 65, stock: 72, minStock: 15 },
+                { id: 'p3', name: 'Red Bull Energy Drink 250ml', costPrice: 380, stock: 18, minStock: 5 },
+                { id: 'p4', name: 'Gourmet Cola 1.5L', costPrice: 90, stock: 30, minStock: 10 },
+                { id: 'p5', name: 'Nestle Pure Life Water 1.5L', costPrice: 60, stock: 100, minStock: 20 },
+                { id: 'p6', name: 'Commercial Packaged Ice Bag', costPrice: 100, stock: 15, minStock: 5 }
+            ],
+            sales: [
+                { id: 's1', productId: 'p1', productName: 'Pepsi 1.5 Litre Bottle', qty: 2, unitPrice: 160, costPrice: 130, totalPrice: 320, profit: 60, payType: 'cash', date: getTodayIso(), timestamp: new Date().toISOString() }
+            ],
+            udhar: [
+                { id: 'u1', customerName: 'Rashid Khan', customerPhone: '0300-1234567', productName: 'Pepsi 1.5 Litre Bottle', qty: 2, totalPrice: 320, status: 'unpaid', date: getTodayIso() }
+            ],
+            expenses: [
+                { id: 'e1', title: 'Daily Ice Block', amount: 300, note: 'Cooling drink crates', date: getTodayIso() }
+            ]
+        };
+
+        let appState = loadState();
+        let selectedPayType = 'cash';
+        let showCostPrice = false;
+        let secretClickCount = 0;
+        let secretClickTimer = null;
+        let pendingConfirmCallback = null;
+
+        /* ============================================================
+           UTILITIES
+        ============================================================ */
+        const $ = (id) => document.getElementById(id);
+
+        function getTodayIso() {
+            const d = new Date();
+            return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        }
+
+        function getIsoDaysAgo(n) {
+            const d = new Date();
+            d.setDate(d.getDate() - n);
+            return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        }
+
+        function formatPKR(n) {
+            const v = Number(n);
+            return 'PKR ' + (isFinite(v) ? Math.round(v) : 0).toLocaleString();
+        }
+
+        function formatDate(iso) {
+            if (!iso) return '';
+            if (iso === getTodayIso()) return 'Today';
+            if (iso === getIsoDaysAgo(1)) return 'Yesterday';
+            const d = new Date(iso + 'T00:00:00');
+            if (isNaN(d)) return iso;
+            return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+        }
+
+        function esc(s) {
+            return String(s === undefined || s === null ? '' : s)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        }
+
+        function uid(prefix) {
+            return prefix + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+        }
+
+        function loadState() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                if (!raw) return JSON.parse(JSON.stringify(DEFAULT_STATE));
+                const p = JSON.parse(raw);
+                return {
+                    products: Array.isArray(p.products) ? p.products : [],
+                    sales: Array.isArray(p.sales) ? p.sales : [],
+                    udhar: Array.isArray(p.udhar) ? p.udhar : [],
+                    expenses: Array.isArray(p.expenses) ? p.expenses : []
+                };
+            } catch (err) {
+                console.warn('Saved data unreadable, starting fresh.', err);
+                return JSON.parse(JSON.stringify(DEFAULT_STATE));
+            }
+        }
+
+        function saveState() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+            } catch (err) {
+                toast('Could not save data (storage blocked or full).', 'error');
+            }
+        }
+
+        function emptyState(icon, text) {
+            return '<div class="text-center py-10 text-slate-500 border border-dashed border-[#232d42] rounded-xl bg-[#0b0f19]/40">' +
+                '<i class="fa-solid ' + icon + ' text-2xl mb-2 opacity-60"></i>' +
+                '<p class="text-xs px-4">' + text + '</p></div>';
+        }
+
+        function toast(msg, type) {
+            type = type || 'success';
+            const colors = { success: 'bg-emerald-600', error: 'bg-red-600', info: 'bg-blue-600' };
+            const icons = { success: 'fa-circle-check', error: 'fa-circle-exclamation', info: 'fa-circle-info' };
+            const t = document.createElement('div');
+            t.className = (colors[type] || colors.success) + ' text-white text-xs font-semibold px-3.5 py-2.5 rounded-lg shadow-lg flex items-center gap-2 pointer-events-auto';
+            t.innerHTML = '<i class="fa-solid ' + (icons[type] || icons.success) + '"></i><span>' + esc(msg) + '</span>';
+            $('toastContainer').appendChild(t);
+            setTimeout(function () {
+                t.style.transition = 'opacity .3s';
+                t.style.opacity = '0';
+                setTimeout(function () { t.remove(); }, 300);
+            }, 2500);
+        }
+
+        /* ============================================================
+           MODALS & CONFIRM DIALOG
+        ============================================================ */
+        function openModal(id) {
+            const m = $(id);
+            if (!m) return;
+            m.classList.remove('hidden');
+            document.documentElement.classList.add('modal-open');
+        }
+
+        function closeModal(id) {
+            const m = $(id);
+            if (!m) return;
+            m.classList.add('hidden');
+            if (!document.querySelector('.modal-overlay:not(.hidden)')) {
+                document.documentElement.classList.remove('modal-open');
+            }
+        }
+
+        function askConfirm(title, message, cb) {
+            $('confirmTitle').textContent = title;
+            $('confirmMessage').textContent = message;
+            pendingConfirmCallback = cb;
+            openModal('confirmModal');
+        }
+
+        /* ============================================================
+           SECRET COST TOGGLE (triple-tap the logo)
+        ============================================================ */
+        function handleSecretCostToggle() {
+            secretClickCount++;
+            clearTimeout(secretClickTimer);
+            secretClickTimer = setTimeout(function () { secretClickCount = 0; }, 800);
+            if (secretClickCount >= 3) {
+                secretClickCount = 0;
+                showCostPrice = !showCostPrice;
+                $('secretLockBadge').classList.toggle('hidden', !showCostPrice);
+                renderAll();
+                toast(showCostPrice ? 'Cost prices unlocked' : 'Cost prices hidden', 'info');
+            }
+        }
+
+        /* ============================================================
+           TABS
+        ============================================================ */
+        const TABS = ['inventory', 'sales', 'udhar', 'expenses', 'reports'];
+
+        function switchTab(name) {
+            TABS.forEach(function (t) {
+                $('view-' + t).classList.toggle('hidden', t !== name);
+                $('tab-' + t).classList.toggle('active-tab', t === name);
+            });
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        /* ============================================================
+           KPI SUMMARY
+        ============================================================ */
+        function renderKPIs() {
+            const today = getTodayIso();
+            const tSales = appState.sales.filter(function (s) { return s.date === today; });
+            const tRevenue = tSales.reduce(function (a, s) { return a + (Number(s.totalPrice) || 0); }, 0);
+            const tItems = tSales.reduce(function (a, s) { return a + (Number(s.qty) || 0); }, 0);
+            $('kpiTodaySales').textContent = formatPKR(tRevenue);
+            $('kpiTodayItems').textContent = tItems + (tItems === 1 ? ' item sold' : ' items sold');
+
+            const unpaid = appState.udhar.filter(function (u) { return u.status !== 'cleared'; });
+            $('kpiPendingUdhar').textContent = formatPKR(unpaid.reduce(function (a, u) { return a + (Number(u.totalPrice) || 0); }, 0));
+            $('kpiUdharEntries').textContent = unpaid.length + (unpaid.length === 1 ? ' unpaid entry' : ' unpaid entries');
+            $('udharBadge').textContent = unpaid.length;
+            $('udharBadge').classList.toggle('hidden', unpaid.length === 0);
+
+            const tProfit = tSales.reduce(function (a, s) { return a + (Number(s.profit) || 0); }, 0);
+            $('kpiTodayProfit').textContent = formatPKR(tProfit);
+            $('kpiMargin').textContent = 'Margin: ' + (tRevenue > 0 ? Math.round(tProfit / tRevenue * 100) + '%' : '0%');
+
+            const totalStock = appState.products.reduce(function (a, p) { return a + (Number(p.stock) || 0); }, 0);
+            $('kpiTotalStock').textContent = totalStock + ' Units';
+            const lowCount = appState.products.filter(function (p) { return (Number(p.stock) || 0) <= (Number(p.minStock) || 0); }).length;
+            $('kpiLowStock').textContent = 'Low Stock: ' + lowCount;
+
+            const stockValue = appState.products.reduce(function (a, p) { return a + (Number(p.costPrice) || 0) * (Number(p.stock) || 0); }, 0);
+            $('kpiStockValue').textContent = showCostPrice ? formatPKR(stockValue) : 'PKR •••';
+        }
+
+        /* ============================================================
+           INVENTORY
+        ============================================================ */
+        function renderInventory() {
+            const q = ($('searchInventory').value || '').toLowerCase().trim();
+            const f = $('filterCategory').value;
+            let list = appState.products.slice().sort(function (a, b) { return a.name.localeCompare(b.name); });
+            if (q) list = list.filter(function (p) { return p.name.toLowerCase().indexOf(q) !== -1; });
+            if (f === 'low') list = list.filter(function (p) { return (Number(p.stock) || 0) > 0 && (Number(p.stock) || 0) <= (Number(p.minStock) || 0); });
+            if (f === 'out') list = list.filter(function (p) { return (Number(p.stock) || 0) <= 0; });
+
+            const c = $('inventoryContainer');
+            if (!list.length) { c.innerHTML = emptyState('fa-box-open', 'No products match. Add your first item with the + button.'); return; }
+
+            c.innerHTML = list.map(function (p) {
+                const stock = Number(p.stock) || 0;
+                const min = Number(p.minStock) || 0;
+                let pill, pillCls;
+                if (stock <= 0) { pill = 'OUT OF STOCK'; pillCls = 'bg-red-500/15 text-red-400 border-red-500/30'; }
+                else if (stock <= min) { pill = 'LOW • ' + stock + ' left'; pillCls = 'bg-amber-500/15 text-amber-400 border-amber-500/30'; }
+                else { pill = stock + ' in stock'; pillCls = 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'; }
+                const costLine = showCostPrice
+                    ? '<p class="text-[10px] text-slate-400 mt-1">Cost: <span class="text-slate-200 font-semibold">' + formatPKR(p.costPrice) + '</span> • Value: ' + formatPKR(stock * (Number(p.costPrice) || 0)) + '</p>'
+                    : '<p class="text-[10px] text-slate-500 mt-1">Cost: <span class="font-semibold">•••</span></p>';
+                return '<div class="bg-[#151c2c] border border-[#232d42] rounded-xl p-3 flex items-center justify-between gap-2">' +
+                    '<div class="min-w-0 flex-1">' +
+                        '<div class="flex items-center gap-2 flex-wrap">' +
+                            '<p class="text-sm font-bold text-white truncate max-w-full">' + esc(p.name) + '</p>' +
+                            '<span class="text-[9px] font-bold px-1.5 py-0.5 rounded border ' + pillCls + '">' + pill + '</span>' +
+                        '</div>' + costLine +
+                    '</div>' +
+                    '<div class="flex items-center gap-1.5 shrink-0">' +
+                        '<button onclick="openRestockModal(\'' + p.id + '\')" class="bg-purple-600/90 hover:bg-purple-500 active:scale-95 text-white w-8 h-8 rounded-lg flex items-center justify-center text-xs" title="Restock"><i class="fa-solid fa-truck-ramp-box"></i></button>' +
+                        '<button onclick="openProductModal(\'' + p.id + '\')" class="bg-slate-700 hover:bg-slate-600 active:scale-95 text-slate-200 w-8 h-8 rounded-lg flex items-center justify-center text-xs" title="Edit"><i class="fa-solid fa-pen"></i></button>' +
+                        '<button onclick="confirmDeleteProduct(\'' + p.id + '\')" class="bg-red-600/90 hover:bg-red-500 active:scale-95 text-white w-8 h-8 rounded-lg flex items-center justify-center text-xs" title="Delete"><i class="fa-solid fa-trash"></i></button>' +
+                    '</div></div>';
+            }).join('');
+        }
+
+        /* ============================================================
+           SALES LOG
+        ============================================================ */
+        function renderSales() {
+            const dateFilter = $('filterSaleDate').value || '';
+            const list = appState.sales.slice()
+                .filter(function (s) { return !dateFilter || s.date === dateFilter; })
+                .sort(function (a, b) { return String(b.timestamp || b.date || '').localeCompare(String(a.timestamp || a.date || '')); });
+
+            const c = $('salesContainer');
+            if (!list.length) { c.innerHTML = emptyState('fa-receipt', 'No sales recorded for this filter yet.'); return; }
+
+            c.innerHTML = list.map(function (s) {
+                const time = s.timestamp ? new Date(s.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+                const payBadge = s.payType === 'udhar'
+                    ? '<span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400 border border-amber-500/30">UDHAR</span>'
+                    : '<span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">CASH</span>';
+                const profitLine = showCostPrice
+                    ? '<p class="text-[10px] mt-0.5 font-semibold ' + (Number(s.profit) >= 0 ? 'text-emerald-400' : 'text-red-400') + '">Profit: ' + formatPKR(s.profit) + '</p>'
+                    : '';
+                return '<div class="bg-[#151c2c] border border-[#232d42] rounded-xl p-3">' +
+                    '<div class="flex items-start justify-between gap-2">' +
+                        '<div class="min-w-0">' +
+                            '<div class="flex items-center gap-2 flex-wrap">' +
+                                '<p class="text-sm font-bold text-white truncate">' + esc(s.productName) + '</p>' + payBadge +
+                            '</div>' +
+                            '<p class="text-[11px] text-slate-400 mt-0.5">' + Number(s.qty) + ' × ' + formatPKR(s.unitPrice) + ' • ' + formatDate(s.date) + (time ? ' • ' + time : '') + '</p>' +
+                            profitLine +
+                        '</div>' +
+                        '<div class="text-right shrink-0 flex items-center gap-2">' +
+                            '<p class="text-sm font-extrabold text-emerald-400">' + formatPKR(s.totalPrice) + '</p>' +
+                            '<button onclick="confirmDeleteSale(\'' + s.id + '\')" class="text-slate-500 hover:text-red-400 p-1.5" title="Delete"><i class="fa-solid fa-trash text-xs"></i></button>' +
+                        '</div>' +
+                    '</div></div>';
+            }).join('');
+        }
+
+        function resetSaleDateFilter() {
+            $('filterSaleDate').value = '';
+            renderSales();
+        }
+
+        /* ============================================================
+           UDHAR KHATA
+        ============================================================ */
+        function renderUdhar() {
+            const q = ($('searchUdhar').value || '').toLowerCase().trim();
+            const status = $('filterUdharStatus').value;
+            const list = appState.udhar.slice()
+                .filter(function (u) { return status === 'all' || u.status === status; })
+                .filter(function (u) {
+                    if (!q) return true;
+                    return ((u.customerName || '') + ' ' + (u.customerPhone || '') + ' ' + (u.productName || '')).toLowerCase().indexOf(q) !== -1;
+                })
+                .sort(function (a, b) { return String(b.date || '').localeCompare(String(a.date || '')); });
+
+            const c = $('udharContainer');
+            if (!list.length) { c.innerHTML = emptyState('fa-book-bookmark', 'No Udhar entries here yet.'); return; }
+
+            c.innerHTML = list.map(function (u) {
+                const unpaid = u.status !== 'cleared';
+                const badge = unpaid
+                    ? '<span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400 border border-amber-500/30">UNPAID</span>'
+                    : '<span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">CLEARED</span>';
+                return '<div class="bg-[#151c2c] border border-[#232d42] rounded-xl p-3">' +
+                    '<div class="flex items-start justify-between gap-2">' +
+                        '<div class="min-w-0">' +
+                            '<div class="flex items-center gap-2 flex-wrap">' +
+                                '<p class="text-sm font-bold text-white truncate">' + esc(u.customerName) + '</p>' + badge +
+                            '</div>' +
+                            '<p class="text-[11px] text-slate-400 mt-0.5">' + esc(u.customerPhone || 'No phone') + ' • ' + esc(u.productName) + ' × ' + Number(u.qty) + '</p>' +
+                            '<p class="text-[10px] text-slate-500 mt-0.5">' + formatDate(u.date) + '</p>' +
+                        '</div>' +
+                        '<div class="text-right shrink-0">' +
+                            '<p class="text-sm font-extrabold ' + (unpaid ? 'text-amber-400' : 'text-slate-400') + '">' + formatPKR(u.totalPrice) + '</p>' +
+                            '<div class="flex items-center gap-1.5 mt-1.5 justify-end">' +
+                                (unpaid ? '<button onclick="markUdharPaid(\'' + u.id + '\')" class="bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white text-[10px] font-bold px-2.5 py-1.5 rounded-lg">Mark Paid</button>' : '') +
+                                '<button onclick="confirmDeleteUdhar(\'' + u.id + '\')" class="text-slate-500 hover:text-red-400 p-1.5" title="Delete"><i class="fa-solid fa-trash text-xs"></i></button>' +
+                            '</div>' +
+                        '</div>' +
+                    '</div></div>';
+            }).join('');
+        }
+
+        function markUdharPaid(id) {
+            const u = appState.udhar.find(function (x) { return x.id === id; });
+            if (!u) return;
+            u.status = 'cleared';
+            u.clearedDate = getTodayIso();
+            saveState();
+            toast('Udhar cleared for ' + u.customerName);
+            renderAll();
+        }
+
+        /* ============================================================
+           EXPENSES
+        ============================================================ */
+        function renderExpenses() {
+            const list = appState.expenses.slice().sort(function (a, b) { return String(b.date || '').localeCompare(String(a.date || '')); });
+            const c = $('expensesContainer');
+            if (!list.length) { c.innerHTML = emptyState('fa-file-invoice-dollar', 'No expenses recorded yet.'); return; }
+
+            c.innerHTML = list.map(function (e) {
+                return '<div class="bg-[#151c2c] border border-[#232d42] rounded-xl p-3 flex items-center justify-between gap-2">' +
+                    '<div class="min-w-0">' +
+                        '<p class="text-sm font-bold text-white truncate">' + esc(e.title) + '</p>' +
+                        '<p class="text-[11px] text-slate-400 mt-0.5">' + formatDate(e.date) + (e.note ? ' • ' + esc(e.note) : '') + '</p>' +
+                    '</div>' +
+                    '<div class="flex items-center gap-2 shrink-0">' +
+                        '<p class="text-sm font-extrabold text-amber-400">-' + formatPKR(e.amount) + '</p>' +
+                        '<button onclick="confirmDeleteExpense(\'' + e.id + '\')" class="text-slate-500 hover:text-red-400 p-1.5" title="Delete"><i class="fa-solid fa-trash text-xs"></i></button>' +
+                    '</div></div>';
+            }).join('');
+        }
+
+        /* ============================================================
+           REPORTS
+        ============================================================ */
+        function getReportRange() {
+            const period = $('reportPeriod').value;
+            const today = getTodayIso();
+            if (period === 'today') return { from: today, to: today };
+            if (period === 'yesterday') { const y = getIsoDaysAgo(1); return { from: y, to: y }; }
+            if (period === 'last7') return { from: getIsoDaysAgo(6), to: today };
+            if (period === 'thisMonth') {
+                const d = new Date();
+                return { from: d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-01', to: today };
+            }
+            return { from: '0000-01-01', to: '9999-12-31' };
+        }
+
+        function renderReports() {
+            const range = getReportRange();
+            const inRange = function (d) { return d >= range.from && d <= range.to; };
+            const sales = appState.sales.filter(function (s) { return inRange(s.date); });
+
+            const revenue = sales.reduce(function (a, s) { return a + (Number(s.totalPrice) || 0); }, 0);
+            const cogs = sales.reduce(function (a, s) { return a + (Number(s.costPrice) || 0) * (Number(s.qty) || 0); }, 0);
+            const expenses = appState.expenses.filter(function (e) { return inRange(e.date); }).reduce(function (a, e) { return a + (Number(e.amount) || 0); }, 0);
+            const net = revenue - cogs - expenses;
+
+            $('repRevenue').textContent = formatPKR(revenue);
+            $('repCOGS').textContent = showCostPrice ? formatPKR(cogs) : 'PKR •••';
+            $('repExpenses').textContent = formatPKR(expenses);
+            $('repNetProfit').textContent = formatPKR(net);
+
+            const byProduct = {};
+            sales.forEach(function (s) {
+                const key = s.productName || 'Unknown';
+                if (!byProduct[key]) byProduct[key] = { name: key, qty: 0, revenue: 0 };
+                byProduct[key].qty += Number(s.qty) || 0;
+                byProduct[key].revenue += Number(s.totalPrice) || 0;
+            });
+            const top = Object.keys(byProduct).map(function (k) { return byProduct[k]; })
+                .sort(function (a, b) { return b.revenue - a.revenue; }).slice(0, 8);
+            const maxRev = top.length ? top[0].revenue : 0;
+
+            $('reportItemBreakdown').innerHTML = top.length ? top.map(function (t) {
+                const pct = maxRev ? Math.max(6, Math.round(t.revenue / maxRev * 100)) : 0;
+                return '<div>' +
+                    '<div class="flex items-center justify-between text-[11px] gap-2">' +
+                        '<span class="text-slate-200 font-semibold truncate">' + esc(t.name) + '</span>' +
+                        '<span class="text-slate-400 shrink-0">' + t.qty + ' sold • ' + formatPKR(t.revenue) + '</span>' +
+                    '</div>' +
+                    '<div class="h-1.5 bg-[#0b0f19] rounded-full mt-1 overflow-hidden">' +
+                        '<div class="h-full bg-blue-500 rounded-full" style="width:' + pct + '%"></div>' +
+                    '</div></div>';
+            }).join('') : '<p class="text-[11px] text-slate-500">No sales in this timeframe.</p>';
+        }
+
+        /* ============================================================
+           SALE MODAL
+        ============================================================ */
+        function openSaleModal() {
+            if (!appState.products.length) { toast('Add a product first.', 'error'); return; }
+            $('saleProductId').innerHTML = '<option value="" disabled selected>Choose a product…</option>' +
+                appState.products.map(function (p) {
+                    const disabled = (Number(p.stock) || 0) <= 0 ? ' disabled' : '';
+                    return '<option value="' + p.id + '"' + disabled + '>' + esc(p.name) + ' — ' + (Number(p.stock) || 0) + ' in stock</option>';
+                }).join('');
+            $('saleForm').reset();
+            $('saleQty').value = 1;
+            $('saleUnitPrice').value = '';
+            setPaymentType('cash');
+            updateSalePricePreview();
+            openModal('saleModal');
+        }
+
+        function onSaleProductChange() {
+            const pid = $('saleProductId').value;
+            if (!$('saleUnitPrice').value && pid) {
+                const last = appState.sales.slice().reverse().find(function (s) { return s.productId === pid; });
+                if (last) $('saleUnitPrice').value = last.unitPrice;
+            }
+            updateSalePricePreview();
+        }
+
+        function updateSalePricePreview() {
+            const qty = Number($('saleQty').value) || 0;
+            const price = Number($('saleUnitPrice').value) || 0;
+            $('saleTotalPreview').textContent = formatPKR(qty * price);
+        }
+
+        const PAY_ACTIVE = 'w-full py-2.5 text-xs font-bold rounded-lg border border-emerald-500 bg-emerald-500/20 text-emerald-300 transition-all';
+        const PAY_INACTIVE = 'w-full py-2.5 text-xs font-bold rounded-lg border border-[#232d42] bg-[#0b0f19] text-slate-400 transition-all';
+
+        function setPaymentType(t) {
+            selectedPayType = t;
+            $('payTypeCash').className = (t === 'cash') ? PAY_ACTIVE : PAY_INACTIVE;
+            $('payTypeUdhar').className = (t === 'udhar') ? PAY_ACTIVE : PAY_INACTIVE;
+            $('udharCustomerFields').classList.toggle('hidden', t !== 'udhar');
+        }
+
+        function handleSaleSubmit(e) {
+            e.preventDefault();
+            const p = appState.products.find(function (x) { return x.id === $('saleProductId').value; });
+            if (!p) { toast('Please select a product.', 'error'); return; }
+            const qty = parseInt($('saleQty').value, 10);
+            const price = Number($('saleUnitPrice').value);
+            if (!qty || qty < 1) { toast('Enter a valid quantity.', 'error'); return; }
+            if (!(price > 0)) { toast('Enter a valid unit price.', 'error'); return; }
+            if (qty > Number(p.stock)) { toast('Only ' + p.stock + ' in stock for ' + p.name + '.', 'error'); return; }
+
+            if (selectedPayType === 'udhar' && !$('udharCustomerName').value.trim()) {
+                toast('Customer name is required for Udhar.', 'error');
+                $('udharCustomerName').focus();
+                return;
+            }
+
+            const total = qty * price;
+            const cost = Number(p.costPrice) || 0;
+
+            appState.sales.unshift({
+                id: uid('s'), productId: p.id, productName: p.name, qty: qty, unitPrice: price,
+                costPrice: cost, totalPrice: total, profit: (price - cost) * qty,
+                payType: selectedPayType, date: getTodayIso(), timestamp: new Date().toISOString()
+            });
+            p.stock = Math.max(0, Number(p.stock) - qty);
+
+            if (selectedPayType === 'udhar') {
+                appState.udhar.unshift({
+                    id: uid('u'),
+                    customerName: $('udharCustomerName').value.trim(),
+                    customerPhone: $('udharCustomerPhone').value.trim(),
+                    customerAddress: $('udharCustomerAddress').value.trim(),
+                    productName: p.name, qty: qty, totalPrice: total, status: 'unpaid', date: getTodayIso()
+                });
+            }
+
+            saveState();
+            closeModal('saleModal');
+            toast('Sale recorded — ' + formatPKR(total));
+            renderAll();
+        }
+
+        /* ============================================================
+           PRODUCT MODAL (ADD / EDIT)
+        ============================================================ */
+        function openProductModal(editId) {
+            $('productForm').reset();
+            $('prodEditId').value = editId || '';
+            if (editId) {
+                const p = appState.products.find(function (x) { return x.id === editId; });
+                if (!p) return;
+                $('productModalTitle').innerHTML = '<i class="fa-solid fa-pen text-blue-400"></i> Edit Product';
+                $('prodName').value = p.name;
+                $('prodCostPrice').value = p.costPrice;
+                $('prodStock').value = p.stock;
+                $('prodMinStock').value = p.minStock || 5;
+            } else {
+                $('productModalTitle').innerHTML = '<i class="fa-solid fa-box text-blue-400"></i> Add New Product';
+                $('prodMinStock').value = 5;
+            }
+            openModal('productModal');
+        }
+
+        function handleProductSubmit(e) {
+            e.preventDefault();
+            const editId = $('prodEditId').value;
+            const name = $('prodName').value.trim();
+            const cost = Math.max(0, Number($('prodCostPrice').value) || 0);
+            const stock = Math.max(0, parseInt($('prodStock').value, 10) || 0);
+            const min = Math.max(1, parseInt($('prodMinStock').value, 10) || 5);
+            if (!name) { toast('Product name is required.', 'error'); return; }
+
+            if (editId) {
+                const p = appState.products.find(function (x) { return x.id === editId; });
+                if (p) { p.name = name; p.costPrice = cost; p.stock = stock; p.minStock = min; }
+                toast('Product updated.');
+            } else {
+                appState.products.push({ id: uid('p'), name: name, costPrice: cost, stock: stock, minStock: min });
+                toast('Product added.');
+            }
+            saveState();
+            closeModal('productModal');
+            renderAll();
+        }
+
+        /* ============================================================
+           RESTOCK MODAL
+        ============================================================ */
+        function openRestockModal(id) {
+            const p = appState.products.find(function (x) { return x.id === id; });
+            if (!p) return;
+            $('restockProdId').value = id;
+            $('restockProdName').textContent = p.name;
+            $('restockCurrentStock').textContent = 'Current stock: ' + p.stock + ' units • Cost: ' + (showCostPrice ? formatPKR(p.costPrice) : '•••');
+            $('restockForm').reset();
+            openModal('restockModal');
+        }
+
+        function handleRestockSubmit(e) {
+            e.preventDefault();
+            const p = appState.products.find(function (x) { return x.id === $('restockProdId').value; });
+            if (!p) return;
+            const qty = parseInt($('restockAddQty').value, 10);
+            if (!qty || qty < 1) { toast('Enter a valid quantity.', 'error'); return; }
+            const newCost = $('restockNewCost').value;
+            p.stock = Number(p.stock) + qty;
+            if (newCost !== '' && Number(newCost) >= 0) p.costPrice = Number(newCost);
+            saveState();
+            closeModal('restockModal');
+            toast('Restocked ' + qty + ' × ' + p.name);
+            renderAll();
+        }
+
+        /* ============================================================
+           EXPENSE MODAL
+        ============================================================ */
+        function openExpenseModal() {
+            $('expenseForm').reset();
+            openModal('expenseModal');
+        }
+
+        function handleExpenseSubmit(e) {
+            e.preventDefault();
+            const title = $('expTitle').value.trim();
+            const amount = Number($('expAmount').value);
+            if (!title) { toast('Expense title is required.', 'error'); return; }
+            if (!(amount > 0)) { toast('Enter a valid amount.', 'error'); return; }
+            appState.expenses.unshift({ id: uid('e'), title: title, amount: amount, note: $('expNote').value.trim(), date: getTodayIso() });
+            saveState();
+            closeModal('expenseModal');
+            toast('Expense saved — ' + formatPKR(amount));
+            renderAll();
+        }
+
+        /* ============================================================
+           BACKUP / RESTORE
+        ============================================================ */
+        function openBackupModal() { openModal('backupModal'); }
+
+        function exportDataJSON() {
+            const blob = new Blob([JSON.stringify(appState, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'jb-drinks-backup-' + getTodayIso() + '.json';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+            toast('Backup file downloaded.');
+        }
+
+        function importDataJSON() {
+            const fileInput = $('importFile');
+            const file = fileInput.files && fileInput.files[0];
+            if (!file) { toast('Choose a backup file first.', 'error'); return; }
+            const reader = new FileReader();
+            reader.onload = function () {
+                try {
+                    const parsed = JSON.parse(reader.result);
+                    if (!parsed || !Array.isArray(parsed.products)) throw new Error('bad format');
+                    askConfirm('Restore Backup?', 'This will replace ALL current data with the backup file. Continue?', function () {
+                        appState = {
+                            products: parsed.products || [],
+                            sales: parsed.sales || [],
+                            udhar: parsed.udhar || [],
+                            expenses: parsed.expenses || []
+                        };
+                        saveState();
+                        closeModal('backupModal');
+                        renderAll();
+                        toast('Data restored successfully.');
+                    });
+                } catch (err) {
+                    toast('Invalid backup file.', 'error');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        /* ============================================================
+           DELETE ACTIONS
+        ============================================================ */
+        function confirmDeleteProduct(id) {
+            askConfirm('Delete Product?', 'This removes the product and its stock. Past sales history stays intact.', function () {
+                appState.products = appState.products.filter(function (p) { return p.id !== id; });
+                saveState(); toast('Product deleted.', 'info'); renderAll();
+            });
+        }
+        function confirmDeleteSale(id) {
+            askConfirm('Delete Sale?', 'Removes this entry from the sales log. Stock is not restored.', function () {
+                appState.sales = appState.sales.filter(function (s) { return s.id !== id; });
+                saveState(); toast('Sale entry deleted.', 'info'); renderAll();
+            });
+        }
+        function confirmDeleteUdhar(id) {
+            askConfirm('Delete Udhar Entry?', 'This record will be permanently removed.', function () {
+                appState.udhar = appState.udhar.filter(function (u) { return u.id !== id; });
+                saveState(); toast('Udhar entry deleted.', 'info'); renderAll();
+            });
+        }
+        function confirmDeleteExpense(id) {
+            askConfirm('Delete Expense?', 'This record will be permanently removed.', function () {
+                appState.expenses = appState.expenses.filter(function (x) { return x.id !== id; });
+                saveState(); toast('Expense deleted.', 'info'); renderAll();
+            });
+        }
+
+        /* ============================================================
+           EVENT BINDINGS & INIT
+        ============================================================ */
+        $('confirmExecuteBtn').addEventListener('click', function () {
+            const cb = pendingConfirmCallback;
+            pendingConfirmCallback = null;
+            closeModal('confirmModal');
+            if (typeof cb === 'function') cb();
+        });
+
+        document.querySelectorAll('.modal-overlay').forEach(function (ov) {
+            ov.addEventListener('click', function (e) { if (e.target === ov) closeModal(ov.id); });
+        });
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                document.querySelectorAll('.modal-overlay:not(.hidden)').forEach(function (m) { closeModal(m.id); });
+                pendingConfirmCallback = null;
+            }
+        });
+
+        function renderAll() {
+            renderKPIs();
+            renderInventory();
+            renderSales();
+            renderUdhar();
+            renderExpenses();
+            renderReports();
+        }
+
+        switchTab('inventory');
+        renderAll();
+    </script>
+</body>
+</html>
