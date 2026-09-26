@@ -693,6 +693,7 @@
         const STORAGE_KEY = 'jb_drinks_inventory_data_v4';
         const LEGACY_STORAGE_KEY = 'jb_drinks_inventory_data_v3';
         const OWNER_EMAIL = 'hamad293742@gmail.com';
+        const EMAIL_ACTION_URL = 'https://hamad23.github.io/jb-drinks/';
         const MIGRATION_DECISION_KEY = 'jb_drinks_firestore_migration_decision';
         const MIGRATION_VERSION = 'firestore-local-v3-migration-v1';
         const db = firebase.firestore();
@@ -855,6 +856,12 @@
                     $('mobileShareButton').classList.add('hidden');
                     $('authError').textContent = 'Verify the email sent to ' + user.email + ', then sign in again.';
                     $('authError').classList.remove('hidden');
+                    sendVerificationEmail(user).then(function () {
+                        $('authError').textContent = 'A fresh verification link was sent to ' + user.email + '. Open the newest email, then sign in.';
+                        $('authError').classList.remove('hidden');
+                    }).catch(function (err) {
+                        console.warn('Could not resend the verification email.', err);
+                    });
                     setSyncStatus('offline', 'Email not verified');
                     return;
                 }
@@ -1807,6 +1814,56 @@
             renderReports();
         }
 
+        function getEmailActionSettings() {
+            return {
+                url: EMAIL_ACTION_URL,
+                handleCodeInApp: true
+            };
+        }
+
+        function sendVerificationEmail(user) {
+            if (!user) return Promise.reject(new Error('No signed-in user'));
+            const storageKey = 'jb_drinks_verification_email_' + user.uid;
+            try {
+                if (sessionStorage.getItem(storageKey)) return Promise.resolve();
+            } catch (err) {}
+            return user.sendEmailVerification(getEmailActionSettings()).then(function () {
+                try { sessionStorage.setItem(storageKey, String(Date.now())); } catch (err) {}
+            });
+        }
+
+        function handleFirebaseEmailAction() {
+            const params = new URLSearchParams(window.location.search);
+            const mode = params.get('mode');
+            const actionCode = params.get('oobCode');
+            if (mode !== 'verifyEmail' || !actionCode) return false;
+
+            setSyncStatus('syncing', 'Verifying email...');
+            firebase.auth().applyActionCode(actionCode).then(function () {
+                const user = firebase.auth().currentUser;
+                const finish = user ? user.reload() : Promise.resolve();
+                return finish.then(function () {
+                    params.delete('mode');
+                    params.delete('oobCode');
+                    params.delete('apiKey');
+                    params.delete('lang');
+                    const cleanSearch = params.toString();
+                    window.history.replaceState({}, '', window.location.pathname + (cleanSearch ? '?' + cleanSearch : ''));
+                    $('authError').textContent = 'Email verified. Sign in to open your shared shop.';
+                    $('authError').classList.remove('hidden');
+                    setSyncStatus('connected', 'Email verified');
+                });
+            }).catch(function (err) {
+                console.error('Email verification failed.', err);
+                $('authError').textContent = err && err.code === 'auth/invalid-action-code'
+                    ? 'This verification link was already used or expired. Sign in to receive a new email.'
+                    : 'Could not verify this email link. Sign in to receive a new email.';
+                $('authError').classList.remove('hidden');
+                setSyncStatus('error', 'Verification failed');
+            });
+            return true;
+        }
+
         function handleAuthSubmit(e) {
             e.preventDefault();
             const email = $('authEmail').value.trim();
@@ -1822,7 +1879,7 @@
             firebase.auth().setPersistence(persistence).then(function () {
                 if (!creatingAccount) return firebase.auth().signInWithEmailAndPassword(email, password);
                 return firebase.auth().createUserWithEmailAndPassword(email, password).then(function (credential) {
-                    return credential.user.sendEmailVerification().then(function () {
+                    return sendVerificationEmail(credential.user).then(function () {
                         return firebase.auth().signOut();
                     });
                 }).then(function () {
@@ -1857,6 +1914,7 @@
 
         switchTab('inventory');
         renderAll();
+        handleFirebaseEmailAction();
         startAuthAndSync();
     </script>
 </body>
