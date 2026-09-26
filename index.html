@@ -25,12 +25,10 @@
         }
     </script>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
     <script>
         firebase.initializeApp({
             apiKey: 'AIzaSyBVP4Eexo_LxG1gMa8XP61exThSa7iabGg',
-            authDomain: 'jb-drinks-sync.firebaseapp.com',
             projectId: 'jb-drinks-sync',
             storageBucket: 'jb-drinks-sync.firebasestorage.app',
             messagingSenderId: '1086257610269',
@@ -123,7 +121,7 @@
 <body class="bg-[#070a11] text-slate-100 min-h-screen selection:bg-blue-500 selection:text-white">
 
     <!-- MAIN WRAPPER -->
-    <div id="appViewportFrame" class="hidden transition-all duration-300 bg-[#0b0f19] min-h-screen safe-pb relative">
+    <div id="appViewportFrame" class="transition-all duration-300 bg-[#0b0f19] min-h-screen safe-pb relative">
 
         <header id="appHeader" class="sticky z-30 bg-[#151c2c]/95 backdrop-blur-md border-b border-[#232d42] px-3 py-2.5 sm:px-6">
             <div class="max-w-7xl mx-auto flex items-center justify-between gap-2">
@@ -158,24 +156,12 @@
                     <button onclick="openBackupModal()" class="bg-slate-700 hover:bg-slate-600 text-slate-200 font-medium text-xs px-2.5 py-2 rounded-lg transition-all" title="Backup / Restore">
                         <i class="fa-solid fa-database"></i>
                     </button>
-                    <button id="shareButton" onclick="openShareModal()" class="hidden bg-slate-700 hover:bg-slate-600 text-slate-200 font-medium text-xs px-2.5 py-2 rounded-lg transition-all" title="Share with brother">
-                        <i class="fa-solid fa-user-plus"></i>
-                    </button>
-                    <button id="signOutButton" onclick="signOutUser()" class="hidden bg-slate-700 hover:bg-slate-600 text-slate-200 font-medium text-xs px-2.5 py-2 rounded-lg transition-all" title="Sign out">
-                        <i class="fa-solid fa-right-from-bracket"></i>
-                    </button>
                 </div>
 
                 <!-- Mobile header actions -->
                 <div id="mobileActions" class="items-center gap-1.5">
                     <button onclick="openBackupModal()" class="p-2.5 text-slate-300 hover:text-white active:bg-slate-700 bg-[#1e293b] rounded-lg border border-[#334155] text-xs" title="Backup / Restore">
                         <i class="fa-solid fa-database"></i>
-                    </button>
-                    <button id="mobileShareButton" onclick="openShareModal()" class="hidden p-2.5 text-slate-300 hover:text-white active:bg-slate-700 bg-[#1e293b] rounded-lg border border-[#334155] text-xs" title="Share with brother">
-                        <i class="fa-solid fa-user-plus"></i>
-                    </button>
-                    <button id="mobileSignOutButton" onclick="signOutUser()" class="hidden p-2.5 text-slate-300 hover:text-white active:bg-slate-700 bg-[#1e293b] rounded-lg border border-[#334155] text-xs" title="Sign out">
-                        <i class="fa-solid fa-right-from-bracket"></i>
                     </button>
                     <button onclick="openSaleModal()" class="bg-emerald-600 active:bg-emerald-700 active:scale-95 text-white font-semibold text-xs px-3 py-2.5 rounded-lg flex items-center gap-1 shadow-sm">
                         <i class="fa-solid fa-cart-shopping"></i> + Sale
@@ -403,42 +389,6 @@
 
     </div>
 
-    <!-- AUTH SCREEN -->
-    <div id="authScreen" class="fixed inset-0 z-[100] bg-[#070a11]/95 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="w-full max-w-md bg-[#151c2c] border border-[#232d42] rounded-2xl p-6 space-y-4 animate-slide-up">
-            <div class="text-center">
-                <div class="w-16 h-16 mx-auto mb-3 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center text-white font-black text-2xl shadow-lg shadow-blue-500/30">
-                    <i class="fa-solid fa-wine-bottle"></i>
-                </div>
-                <h2 id="authTitle" class="text-xl font-bold text-white">Sign In</h2>
-                <p class="text-slate-400 text-xs mt-1">Access your shared JB Drinks data</p>
-            </div>
-            <form id="authForm" onsubmit="handleAuthSubmit(event)" class="space-y-3">
-                <div>
-                    <label class="block text-xs font-semibold text-slate-300 mb-1">Email</label>
-                    <input type="email" id="authEmail" autocomplete="email" required placeholder="you@example.com" class="w-full bg-[#0b0f19] border border-[#232d42] rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-blue-500">
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-slate-300 mb-1">Password</label>
-                    <input type="password" id="authPassword" autocomplete="current-password" required placeholder="••••••••" class="w-full bg-[#0b0f19] border border-[#232d42] rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-blue-500">
-                </div>
-                <div class="flex items-center justify-between">
-                    <label class="flex items-center gap-1.5 text-xs text-slate-300">
-                        <input type="checkbox" id="authPersist" class="w-4 h-4 accent-blue-500 rounded border-[#232d42] bg-[#0b0f19] focus:ring-blue-500">
-                        <span>Remember me</span>
-                    </label>
-                </div>
-                <button type="submit" id="authSubmitButton" class="w-full bg-blue-600 hover:bg-blue-500 active:scale-[.98] text-white font-bold py-3 text-xs rounded-lg transition-all shadow-md">
-                    Sign In
-                </button>
-                <button type="button" id="authModeButton" onclick="toggleAuthMode()" class="w-full bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold py-2.5 text-xs rounded-lg transition-all">
-                    Create Account
-                </button>
-            </form>
-            <p id="authError" class="hidden text-center text-xs text-red-400"></p>
-        </div>
-    </div>
-
     <!-- MODAL 1: RECORD SALE -->
     <div id="saleModal" class="modal-overlay fixed inset-0 bg-black/80 z-50 hidden backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
         <div class="modal-sheet bg-[#151c2c] border-t sm:border border-[#232d42] w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl p-4 space-y-3 overflow-y-auto animate-slide-up">
@@ -640,31 +590,6 @@
         </div>
     </div>
 
-    <!-- MODAL 6: SHARE ACCESS -->
-    <div id="shareModal" class="modal-overlay fixed inset-0 bg-black/80 z-50 hidden backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
-        <div class="modal-sheet bg-[#151c2c] border-t sm:border border-[#232d42] w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl p-4 space-y-3 overflow-y-auto animate-slide-up">
-            <div class="sm:hidden w-10 h-1 bg-slate-600 rounded-full mx-auto mb-1"></div>
-            <div class="flex items-center justify-between border-b border-[#232d42] pb-2.5">
-                <h3 class="text-sm sm:text-base font-bold text-white flex items-center gap-2">
-                    <i class="fa-solid fa-user-plus text-blue-400"></i> Share Cloud Access
-                </h3>
-                <button onclick="closeModal('shareModal')" class="text-slate-400 hover:text-white p-2 -mr-1">
-                    <i class="fa-solid fa-xmark text-lg"></i>
-                </button>
-            </div>
-            <form id="shareForm" onsubmit="handleShareSubmit(event)" class="space-y-3">
-                <div>
-                    <label class="block text-xs font-semibold text-slate-300 mb-1">Brother’s account email *</label>
-                    <input type="email" id="shareEmail" required placeholder="brother@example.com" class="w-full bg-[#0b0f19] border border-[#232d42] rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-blue-500">
-                    <p class="text-[10px] text-slate-500 mt-1">He must create an account with this exact email and verify it before opening the shared shop.</p>
-                </div>
-                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 active:scale-[.98] text-white font-bold py-3 text-xs rounded-lg transition-all shadow-md">
-                    Allow This Account
-                </button>
-            </form>
-        </div>
-    </div>
-
     <!-- CUSTOM CONFIRM DIALOG -->
     <div id="confirmModal" class="modal-overlay fixed inset-0 bg-black/80 z-50 hidden backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
         <div class="modal-sheet bg-[#151c2c] border-t sm:border border-[#232d42] w-full sm:max-w-sm rounded-t-2xl sm:rounded-2xl p-4 space-y-3 animate-slide-up">
@@ -692,8 +617,6 @@
         ============================================================ */
         const STORAGE_KEY = 'jb_drinks_inventory_data_v4';
         const LEGACY_STORAGE_KEY = 'jb_drinks_inventory_data_v3';
-        const OWNER_EMAIL = 'hamad293742@gmail.com';
-        const EMAIL_ACTION_URL = 'https://hamad23.github.io/jb-drinks/';
         const MIGRATION_DECISION_KEY = 'jb_drinks_firestore_migration_decision';
         const MIGRATION_VERSION = 'firestore-local-v3-migration-v1';
         const db = firebase.firestore();
@@ -715,7 +638,6 @@
         let syncUnsubscribers = [];
         let syncStatusTimer = null;
         let migrationInProgress = false;
-        let authMode = 'signin';
 
         /* ============================================================
            UTILITIES
@@ -829,60 +751,17 @@
             syncUnsubscribers.push(unsubscribe);
         }
 
-        function startAuthAndSync() {
-            firebase.auth().onAuthStateChanged(function (user) {
-                syncUnsubscribers.forEach(function (unsubscribe) { unsubscribe(); });
-                syncUnsubscribers = [];
-                if (!user) {
-                    appState = cloneState(DEFAULT_STATE);
-                    saveState();
-                    renderAll();
-                    $('authScreen').classList.remove('hidden');
-                    $('appViewportFrame').classList.add('hidden');
-                    $('signOutButton').classList.add('hidden');
-                    $('mobileSignOutButton').classList.add('hidden');
-                    $('shareButton').classList.add('hidden');
-                    $('mobileShareButton').classList.add('hidden');
-                    setSyncStatus('offline', 'Signed out');
-                    return;
-                }
-
-                if (!user.emailVerified) {
-                    $('authScreen').classList.remove('hidden');
-                    $('appViewportFrame').classList.add('hidden');
-                    $('signOutButton').classList.add('hidden');
-                    $('mobileSignOutButton').classList.add('hidden');
-                    $('shareButton').classList.add('hidden');
-                    $('mobileShareButton').classList.add('hidden');
-                    $('authError').textContent = 'Verify the email sent to ' + user.email + ', then sign in again.';
-                    $('authError').classList.remove('hidden');
-                    sendVerificationEmail(user).then(function () {
-                        $('authError').textContent = 'A fresh verification link was sent to ' + user.email + '. Open the newest email, then sign in.';
-                        $('authError').classList.remove('hidden');
-                    }).catch(function (err) {
-                        console.warn('Could not resend the verification email.', err);
-                    });
-                    setSyncStatus('offline', 'Email not verified');
-                    return;
-                }
-
-                $('authScreen').classList.add('hidden');
-                $('appViewportFrame').classList.remove('hidden');
-                $('signOutButton').classList.remove('hidden');
-                $('mobileSignOutButton').classList.remove('hidden');
-                const owner = String(user.email).toLowerCase() === OWNER_EMAIL;
-                $('shareButton').classList.toggle('hidden', !owner);
-                $('mobileShareButton').classList.toggle('hidden', !owner);
-                setSyncStatus('syncing', 'Connecting...');
-                function startListeners() {
-                    ['products', 'sales', 'udhar', 'expenses'].forEach(subscribeToCollection);
-                }
-                runMigration(user.uid).then(startListeners).catch(function (err) {
-                    console.error('Migration failed.', err);
-                    setSyncStatus('error', 'Migration failed');
-                    toast('Local data could not be uploaded, but cloud data is still loading.', 'error');
-                    startListeners();
-                });
+        function startSync() {
+            $('appViewportFrame').classList.remove('hidden');
+            setSyncStatus('syncing', 'Connecting...');
+            function startListeners() {
+                ['products', 'sales', 'udhar', 'expenses'].forEach(subscribeToCollection);
+            }
+            runMigration().then(startListeners).catch(function (err) {
+                console.error('Migration failed.', err);
+                setSyncStatus('error', 'Migration failed');
+                toast('Local data could not be uploaded, but cloud data is still loading.', 'error');
+                startListeners();
             });
         }
 
@@ -932,7 +811,7 @@
             });
         }
 
-        function runMigration(userId) {
+        function runMigration() {
             if (migrationInProgress) return migrationInProgress;
             let migrationDecision = null;
             try { migrationDecision = localStorage.getItem(MIGRATION_DECISION_KEY); } catch (err) {}
@@ -957,8 +836,7 @@
                         transaction.set(migrationRef, {
                             version: MIGRATION_VERSION,
                             completedAt: firebase.firestore.FieldValue.serverTimestamp(),
-                            outcome: 'skipped-cloud-data-exists',
-                            migratedBy: userId
+                            outcome: 'skipped-cloud-data-exists'
                         });
                         return false;
                     }
@@ -971,18 +849,17 @@
                             const id = String(item.id || db.collection(collectionName).doc().id);
                             transaction.set(db.collection(collectionName).doc(id), Object.assign({}, item, {
                                 id: id,
-                                ownerId: userId,
                                 migratedAt: firebase.firestore.FieldValue.serverTimestamp(),
                                 migrationVersion: MIGRATION_VERSION
                             }));
+
                         });
                     });
 
                     transaction.set(migrationRef, {
                         version: MIGRATION_VERSION,
                         completedAt: firebase.firestore.FieldValue.serverTimestamp(),
-                        outcome: 'migrated',
-                        migratedBy: userId,
+                            outcome: 'migrated',
                         migratedCollections: touched,
                         counts: {
                             products: legacyState.products.length,
@@ -1388,17 +1265,14 @@
 
             const total = qty * price;
             const cost = Number(p.costPrice) || 0;
-            const user = firebase.auth().currentUser;
-            if (!user) { toast('Sign in to save this sale.', 'error'); return; }
             const saleId = db.collection('sales').doc().id;
             const sale = {
-                id: saleId, ownerId: user.uid, productId: p.id, productName: p.name, qty: qty, unitPrice: price,
+                id: saleId, productId: p.id, productName: p.name, qty: qty, unitPrice: price,
                 costPrice: cost, totalPrice: total, profit: (price - cost) * qty,
                 payType: selectedPayType, date: getTodayIso(), timestamp: new Date().toISOString()
             };
             const udhar = selectedPayType === 'udhar' ? {
                 id: db.collection('udhar').doc().id,
-                ownerId: user.uid,
                 customerName: $('udharCustomerName').value.trim(),
                 customerPhone: $('udharCustomerPhone').value.trim(),
                 customerAddress: $('udharCustomerAddress').value.trim(),
@@ -1470,8 +1344,6 @@
             const stock = Math.max(0, parseInt($('prodStock').value, 10) || 0);
             const min = Math.max(1, parseInt($('prodMinStock').value, 10) || 5);
             if (!name) { toast('Product name is required.', 'error'); return; }
-            const user = firebase.auth().currentUser;
-            if (!user) { toast('Sign in to save products.', 'error'); return; }
             const button = e.submitter || $('productForm').querySelector('button[type="submit"]');
             if (button) button.disabled = true;
             setSyncStatus('syncing', 'Saving...');
@@ -1500,7 +1372,6 @@
                 const productId = db.collection('products').doc().id;
                 saveOperation = db.collection('products').doc(productId).set({
                     id: productId,
-                    ownerId: user.uid,
                     name: name,
                     costPrice: cost,
                     stock: stock,
@@ -1542,8 +1413,6 @@
             const qty = parseInt($('restockAddQty').value, 10);
             if (!qty || qty < 1) { toast('Enter a valid quantity.', 'error'); return; }
             const newCost = $('restockNewCost').value;
-            const user = firebase.auth().currentUser;
-            if (!user) { toast('Sign in to restock products.', 'error'); return; }
             const updates = { stock: firebase.firestore.FieldValue.increment(qty) };
             if (newCost !== '' && Number(newCost) >= 0) updates.costPrice = Number(newCost);
             const button = e.submitter || $('restockForm').querySelector('button[type="submit"]');
@@ -1588,11 +1457,8 @@
             const amount = Number($('expAmount').value);
             if (!title) { toast('Expense title is required.', 'error'); return; }
             if (!(amount > 0)) { toast('Enter a valid amount.', 'error'); return; }
-            const user = firebase.auth().currentUser;
-            if (!user) { toast('Sign in to save expenses.', 'error'); return; }
             const expense = {
                 id: db.collection('expenses').doc().id,
-                ownerId: user.uid,
                 title: title,
                 amount: amount,
                 note: $('expNote').value.trim(),
@@ -1613,41 +1479,6 @@
         /* ============================================================
            BACKUP / RESTORE
         ============================================================ */
-        function openShareModal() {
-            if (!isOwnerUser()) { toast('Only the owner can share cloud access.', 'error'); return; }
-            $('shareForm').reset();
-            openModal('shareModal');
-        }
-
-        function isOwnerUser() {
-            const user = firebase.auth().currentUser;
-            return !!user && user.emailVerified && String(user.email).toLowerCase() === OWNER_EMAIL;
-        }
-
-        function handleShareSubmit(e) {
-            e.preventDefault();
-            if (!isOwnerUser()) { toast('Only the owner can share cloud access.', 'error'); return; }
-            const email = $('shareEmail').value.trim().toLowerCase();
-            if (!email) { toast('Enter your brother’s account email.', 'error'); return; }
-            const button = e.submitter || $('shareForm').querySelector('button[type="submit"]');
-            if (button) button.disabled = true;
-            setSyncStatus('syncing', 'Sharing...');
-            db.collection('allowedUsers').doc(email).set({
-                email: email,
-                addedAt: firebase.firestore.FieldValue.serverTimestamp()
-            }).then(function () {
-                closeModal('shareModal');
-                setSyncStatus('connected', 'Access shared');
-                toast('Access granted for ' + email + '.');
-            }).catch(function (err) {
-                console.error('Sharing failed.', err);
-                setSyncStatus('error', 'Share failed');
-                toast('Could not share access. Please try again.', 'error');
-            }).finally(function () {
-                if (button) button.disabled = false;
-            });
-        }
-
         function openBackupModal() { openModal('backupModal'); }
 
         function exportDataJSON() {
@@ -1667,8 +1498,6 @@
             const fileInput = $('importFile');
             const file = fileInput.files && fileInput.files[0];
             if (!file) { toast('Choose a backup file first.', 'error'); return; }
-            const user = firebase.auth().currentUser;
-            if (!user) { toast('Sign in before restoring data.', 'error'); return; }
             const reader = new FileReader();
             reader.onload = function () {
                 try {
@@ -1696,7 +1525,6 @@
                                         ref: db.collection(collectionName).doc(id),
                                         data: Object.assign({}, item, {
                                             id: id,
-                                            ownerId: user.uid,
                                             restoredAt: firebase.firestore.FieldValue.serverTimestamp()
                                         })
                                     });
@@ -1814,108 +1642,9 @@
             renderReports();
         }
 
-        function getEmailActionSettings() {
-            return {
-                url: EMAIL_ACTION_URL,
-                handleCodeInApp: true
-            };
-        }
-
-        function sendVerificationEmail(user) {
-            if (!user) return Promise.reject(new Error('No signed-in user'));
-            const storageKey = 'jb_drinks_verification_email_' + user.uid;
-            try {
-                if (sessionStorage.getItem(storageKey)) return Promise.resolve();
-            } catch (err) {}
-            return user.sendEmailVerification(getEmailActionSettings()).then(function () {
-                try { sessionStorage.setItem(storageKey, String(Date.now())); } catch (err) {}
-            });
-        }
-
-        function handleFirebaseEmailAction() {
-            const params = new URLSearchParams(window.location.search);
-            const mode = params.get('mode');
-            const actionCode = params.get('oobCode');
-            if (mode !== 'verifyEmail' || !actionCode) return false;
-
-            setSyncStatus('syncing', 'Verifying email...');
-            firebase.auth().applyActionCode(actionCode).then(function () {
-                const user = firebase.auth().currentUser;
-                const finish = user ? user.reload() : Promise.resolve();
-                return finish.then(function () {
-                    params.delete('mode');
-                    params.delete('oobCode');
-                    params.delete('apiKey');
-                    params.delete('lang');
-                    const cleanSearch = params.toString();
-                    window.history.replaceState({}, '', window.location.pathname + (cleanSearch ? '?' + cleanSearch : ''));
-                    $('authError').textContent = 'Email verified. Sign in to open your shared shop.';
-                    $('authError').classList.remove('hidden');
-                    setSyncStatus('connected', 'Email verified');
-                });
-            }).catch(function (err) {
-                console.error('Email verification failed.', err);
-                $('authError').textContent = err && err.code === 'auth/invalid-action-code'
-                    ? 'This verification link was already used or expired. Sign in to receive a new email.'
-                    : 'Could not verify this email link. Sign in to receive a new email.';
-                $('authError').classList.remove('hidden');
-                setSyncStatus('error', 'Verification failed');
-            });
-            return true;
-        }
-
-        function handleAuthSubmit(e) {
-            e.preventDefault();
-            const email = $('authEmail').value.trim();
-            const password = $('authPassword').value;
-            const authError = $('authError');
-            const creatingAccount = authMode === 'signup';
-            authError.classList.add('hidden');
-            $('authSubmitButton').disabled = true;
-            const persistence = $('authPersist').checked
-                ? firebase.auth.Auth.Persistence.LOCAL
-                : firebase.auth.Auth.Persistence.SESSION;
-            setSyncStatus('syncing', creatingAccount ? 'Creating account...' : 'Signing in...');
-            firebase.auth().setPersistence(persistence).then(function () {
-                if (!creatingAccount) return firebase.auth().signInWithEmailAndPassword(email, password);
-                return firebase.auth().createUserWithEmailAndPassword(email, password).then(function (credential) {
-                    return sendVerificationEmail(credential.user).then(function () {
-                        return firebase.auth().signOut();
-                    });
-                }).then(function () {
-                    authError.textContent = 'Account created. Verify the email we sent you, then sign in.';
-                    authError.classList.remove('hidden');
-                });
-            }).catch(function (err) {
-                authError.textContent = err.message;
-                authError.classList.remove('hidden');
-                setSyncStatus('error', 'Authentication failed');
-            }).finally(function () {
-                $('authSubmitButton').disabled = false;
-            });
-        }
-
-        function toggleAuthMode() {
-            authMode = authMode === 'signup' ? 'signin' : 'signup';
-            const signingUp = authMode === 'signup';
-            $('authTitle').textContent = signingUp ? 'Create Account' : 'Sign In';
-            $('authSubmitButton').textContent = signingUp ? 'Create Account' : 'Sign In';
-            $('authModeButton').textContent = signingUp ? 'Back to Sign In' : 'Create Account';
-            $('authPassword').setAttribute('autocomplete', signingUp ? 'new-password' : 'current-password');
-            $('authError').classList.add('hidden');
-        }
-
-        function signOutUser() {
-            firebase.auth().signOut().catch(function (err) {
-                console.error('Sign out failed.', err);
-                toast('Could not sign out. Please try again.', 'error');
-            });
-        }
-
         switchTab('inventory');
         renderAll();
-        handleFirebaseEmailAction();
-        startAuthAndSync();
+        startSync();
     </script>
 </body>
 </html>
