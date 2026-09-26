@@ -24,6 +24,19 @@
             }
         }
     </script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+    <script>
+        firebase.initializeApp({
+            apiKey: 'AIzaSyBVP4Eexo_LxG1gMa8XP61exThSa7iabGg',
+            authDomain: 'jb-drinks-sync.firebaseapp.com',
+            projectId: 'jb-drinks-sync',
+            storageBucket: 'jb-drinks-sync.firebasestorage.app',
+            messagingSenderId: '1086257610269',
+            appId: '1:1086257610269:web:60cf354bc5936a098d50f4'
+        });
+    </script>
 
     <!-- Font Awesome Icons & Inter Font -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -110,7 +123,7 @@
 <body class="bg-[#070a11] text-slate-100 min-h-screen selection:bg-blue-500 selection:text-white">
 
     <!-- MAIN WRAPPER -->
-    <div id="appViewportFrame" class="transition-all duration-300 bg-[#0b0f19] min-h-screen safe-pb relative">
+    <div id="appViewportFrame" class="hidden transition-all duration-300 bg-[#0b0f19] min-h-screen safe-pb relative">
 
         <header id="appHeader" class="sticky z-30 bg-[#151c2c]/95 backdrop-blur-md border-b border-[#232d42] px-3 py-2.5 sm:px-6">
             <div class="max-w-7xl mx-auto flex items-center justify-between gap-2">
@@ -123,7 +136,8 @@
                     <div class="min-w-0 flex-1">
                         <div class="flex items-center gap-1.5 flex-wrap">
                             <h1 class="text-base sm:text-lg font-bold tracking-tight text-white leading-tight">JB Drinks</h1>
-                            <span class="text-[10px] bg-blue-500/20 text-blue-400 font-semibold px-1.5 py-0.5 rounded border border-blue-500/30">Local Store</span>
+                            <span class="text-[10px] bg-emerald-500/20 text-emerald-400 font-semibold px-1.5 py-0.5 rounded border border-emerald-500/30">Cloud Sync</span>
+                            <span id="syncStatus" class="hidden text-[10px] bg-slate-700/70 text-slate-300 font-semibold px-1.5 py-0.5 rounded border border-[#334155]">Connecting...</span>
                             <span id="secretLockBadge" class="hidden text-[10px] bg-emerald-500/20 text-emerald-400 font-semibold px-1.5 py-0.5 rounded border border-emerald-500/30"><i class="fa-solid fa-eye text-[9px] mr-0.5"></i> Costs Unlocked</span>
                         </div>
                         <p class="text-[10px] sm:text-[11px] text-slate-400 leading-tight truncate">Jutt Brothers Drinks • Product & Sales Tracker</p>
@@ -144,12 +158,24 @@
                     <button onclick="openBackupModal()" class="bg-slate-700 hover:bg-slate-600 text-slate-200 font-medium text-xs px-2.5 py-2 rounded-lg transition-all" title="Backup / Restore">
                         <i class="fa-solid fa-database"></i>
                     </button>
+                    <button id="shareButton" onclick="openShareModal()" class="hidden bg-slate-700 hover:bg-slate-600 text-slate-200 font-medium text-xs px-2.5 py-2 rounded-lg transition-all" title="Share with brother">
+                        <i class="fa-solid fa-user-plus"></i>
+                    </button>
+                    <button id="signOutButton" onclick="signOutUser()" class="hidden bg-slate-700 hover:bg-slate-600 text-slate-200 font-medium text-xs px-2.5 py-2 rounded-lg transition-all" title="Sign out">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                    </button>
                 </div>
 
                 <!-- Mobile header actions -->
                 <div id="mobileActions" class="items-center gap-1.5">
                     <button onclick="openBackupModal()" class="p-2.5 text-slate-300 hover:text-white active:bg-slate-700 bg-[#1e293b] rounded-lg border border-[#334155] text-xs" title="Backup / Restore">
                         <i class="fa-solid fa-database"></i>
+                    </button>
+                    <button id="mobileShareButton" onclick="openShareModal()" class="hidden p-2.5 text-slate-300 hover:text-white active:bg-slate-700 bg-[#1e293b] rounded-lg border border-[#334155] text-xs" title="Share with brother">
+                        <i class="fa-solid fa-user-plus"></i>
+                    </button>
+                    <button id="mobileSignOutButton" onclick="signOutUser()" class="hidden p-2.5 text-slate-300 hover:text-white active:bg-slate-700 bg-[#1e293b] rounded-lg border border-[#334155] text-xs" title="Sign out">
+                        <i class="fa-solid fa-right-from-bracket"></i>
                     </button>
                     <button onclick="openSaleModal()" class="bg-emerald-600 active:bg-emerald-700 active:scale-95 text-white font-semibold text-xs px-3 py-2.5 rounded-lg flex items-center gap-1 shadow-sm">
                         <i class="fa-solid fa-cart-shopping"></i> + Sale
@@ -377,6 +403,42 @@
 
     </div>
 
+    <!-- AUTH SCREEN -->
+    <div id="authScreen" class="fixed inset-0 z-[100] bg-[#070a11]/95 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="w-full max-w-md bg-[#151c2c] border border-[#232d42] rounded-2xl p-6 space-y-4 animate-slide-up">
+            <div class="text-center">
+                <div class="w-16 h-16 mx-auto mb-3 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center text-white font-black text-2xl shadow-lg shadow-blue-500/30">
+                    <i class="fa-solid fa-wine-bottle"></i>
+                </div>
+                <h2 id="authTitle" class="text-xl font-bold text-white">Sign In</h2>
+                <p class="text-slate-400 text-xs mt-1">Access your shared JB Drinks data</p>
+            </div>
+            <form id="authForm" onsubmit="handleAuthSubmit(event)" class="space-y-3">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Email</label>
+                    <input type="email" id="authEmail" autocomplete="email" required placeholder="you@example.com" class="w-full bg-[#0b0f19] border border-[#232d42] rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-blue-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Password</label>
+                    <input type="password" id="authPassword" autocomplete="current-password" required placeholder="••••••••" class="w-full bg-[#0b0f19] border border-[#232d42] rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-blue-500">
+                </div>
+                <div class="flex items-center justify-between">
+                    <label class="flex items-center gap-1.5 text-xs text-slate-300">
+                        <input type="checkbox" id="authPersist" class="w-4 h-4 accent-blue-500 rounded border-[#232d42] bg-[#0b0f19] focus:ring-blue-500">
+                        <span>Remember me</span>
+                    </label>
+                </div>
+                <button type="submit" id="authSubmitButton" class="w-full bg-blue-600 hover:bg-blue-500 active:scale-[.98] text-white font-bold py-3 text-xs rounded-lg transition-all shadow-md">
+                    Sign In
+                </button>
+                <button type="button" id="authModeButton" onclick="toggleAuthMode()" class="w-full bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold py-2.5 text-xs rounded-lg transition-all">
+                    Create Account
+                </button>
+            </form>
+            <p id="authError" class="hidden text-center text-xs text-red-400"></p>
+        </div>
+    </div>
+
     <!-- MODAL 1: RECORD SALE -->
     <div id="saleModal" class="modal-overlay fixed inset-0 bg-black/80 z-50 hidden backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
         <div class="modal-sheet bg-[#151c2c] border-t sm:border border-[#232d42] w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl p-4 space-y-3 overflow-y-auto animate-slide-up">
@@ -578,6 +640,31 @@
         </div>
     </div>
 
+    <!-- MODAL 6: SHARE ACCESS -->
+    <div id="shareModal" class="modal-overlay fixed inset-0 bg-black/80 z-50 hidden backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div class="modal-sheet bg-[#151c2c] border-t sm:border border-[#232d42] w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl p-4 space-y-3 overflow-y-auto animate-slide-up">
+            <div class="sm:hidden w-10 h-1 bg-slate-600 rounded-full mx-auto mb-1"></div>
+            <div class="flex items-center justify-between border-b border-[#232d42] pb-2.5">
+                <h3 class="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-user-plus text-blue-400"></i> Share Cloud Access
+                </h3>
+                <button onclick="closeModal('shareModal')" class="text-slate-400 hover:text-white p-2 -mr-1">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <form id="shareForm" onsubmit="handleShareSubmit(event)" class="space-y-3">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Brother’s account email *</label>
+                    <input type="email" id="shareEmail" required placeholder="brother@example.com" class="w-full bg-[#0b0f19] border border-[#232d42] rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-blue-500">
+                    <p class="text-[10px] text-slate-500 mt-1">He must create an account with this exact email and verify it before opening the shared shop.</p>
+                </div>
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 active:scale-[.98] text-white font-bold py-3 text-xs rounded-lg transition-all shadow-md">
+                    Allow This Account
+                </button>
+            </form>
+        </div>
+    </div>
+
     <!-- CUSTOM CONFIRM DIALOG -->
     <div id="confirmModal" class="modal-overlay fixed inset-0 bg-black/80 z-50 hidden backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
         <div class="modal-sheet bg-[#151c2c] border-t sm:border border-[#232d42] w-full sm:max-w-sm rounded-t-2xl sm:rounded-2xl p-4 space-y-3 animate-slide-up">
@@ -603,34 +690,31 @@
         /* ============================================================
            STATE & STORAGE
         ============================================================ */
-        const STORAGE_KEY = 'jb_drinks_inventory_data_v3';
+        const STORAGE_KEY = 'jb_drinks_inventory_data_v4';
+        const LEGACY_STORAGE_KEY = 'jb_drinks_inventory_data_v3';
+        const OWNER_EMAIL = 'hamad293742@gmail.com';
+        const MIGRATION_DECISION_KEY = 'jb_drinks_firestore_migration_decision';
+        const MIGRATION_VERSION = 'firestore-local-v3-migration-v1';
+        const db = firebase.firestore();
+        db.enablePersistence().catch(function () {});
 
         const DEFAULT_STATE = {
-            products: [
-                { id: 'p1', name: 'Pepsi 1.5 Litre Bottle', costPrice: 130, stock: 48, minStock: 10 },
-                { id: 'p2', name: 'Coca Cola 500ml', costPrice: 65, stock: 72, minStock: 15 },
-                { id: 'p3', name: 'Red Bull Energy Drink 250ml', costPrice: 380, stock: 18, minStock: 5 },
-                { id: 'p4', name: 'Gourmet Cola 1.5L', costPrice: 90, stock: 30, minStock: 10 },
-                { id: 'p5', name: 'Nestle Pure Life Water 1.5L', costPrice: 60, stock: 100, minStock: 20 },
-                { id: 'p6', name: 'Commercial Packaged Ice Bag', costPrice: 100, stock: 15, minStock: 5 }
-            ],
-            sales: [
-                { id: 's1', productId: 'p1', productName: 'Pepsi 1.5 Litre Bottle', qty: 2, unitPrice: 160, costPrice: 130, totalPrice: 320, profit: 60, payType: 'cash', date: getTodayIso(), timestamp: new Date().toISOString() }
-            ],
-            udhar: [
-                { id: 'u1', customerName: 'Rashid Khan', customerPhone: '0300-1234567', productName: 'Pepsi 1.5 Litre Bottle', qty: 2, totalPrice: 320, status: 'unpaid', date: getTodayIso() }
-            ],
-            expenses: [
-                { id: 'e1', title: 'Daily Ice Block', amount: 300, note: 'Cooling drink crates', date: getTodayIso() }
-            ]
+            products: [],
+            sales: [],
+            udhar: [],
+            expenses: []
         };
 
-        let appState = loadState();
+        let appState = cloneState(DEFAULT_STATE);
         let selectedPayType = 'cash';
         let showCostPrice = false;
         let secretClickCount = 0;
         let secretClickTimer = null;
         let pendingConfirmCallback = null;
+        let syncUnsubscribers = [];
+        let syncStatusTimer = null;
+        let migrationInProgress = false;
+        let authMode = 'signin';
 
         /* ============================================================
            UTILITIES
@@ -675,26 +759,242 @@
         function loadState() {
             try {
                 const raw = localStorage.getItem(STORAGE_KEY);
-                if (!raw) return JSON.parse(JSON.stringify(DEFAULT_STATE));
-                const p = JSON.parse(raw);
-                return {
-                    products: Array.isArray(p.products) ? p.products : [],
-                    sales: Array.isArray(p.sales) ? p.sales : [],
-                    udhar: Array.isArray(p.udhar) ? p.udhar : [],
-                    expenses: Array.isArray(p.expenses) ? p.expenses : []
-                };
+                if (!raw) return cloneState(DEFAULT_STATE);
+                const parsed = JSON.parse(raw);
+                return normalizeState(parsed);
             } catch (err) {
-                console.warn('Saved data unreadable, starting fresh.', err);
-                return JSON.parse(JSON.stringify(DEFAULT_STATE));
+                console.warn('Local cache unreadable, starting with an empty state.', err);
+                return cloneState(DEFAULT_STATE);
             }
+        }
+
+        function cloneState(state) {
+            return JSON.parse(JSON.stringify(state));
+        }
+
+        function normalizeState(state) {
+            return {
+                products: Array.isArray(state && state.products) ? state.products : [],
+                sales: Array.isArray(state && state.sales) ? state.sales : [],
+                udhar: Array.isArray(state && state.udhar) ? state.udhar : [],
+                expenses: Array.isArray(state && state.expenses) ? state.expenses : []
+            };
         }
 
         function saveState() {
             try {
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
             } catch (err) {
-                toast('Could not save data (storage blocked or full).', 'error');
+                console.warn('Local cache could not be updated.', err);
             }
+        }
+
+        function setSyncStatus(status, detail) {
+            const el = $('syncStatus');
+            if (!el) return;
+            el.textContent = detail || status;
+            el.classList.remove('hidden');
+            if (syncStatusTimer) clearTimeout(syncStatusTimer);
+            if (status === 'connected' || status === 'error') {
+                syncStatusTimer = setTimeout(function () { el.classList.add('hidden'); }, status === 'connected' ? 2500 : 6000);
+            }
+        }
+
+        function normalizeDoc(doc) {
+            const data = doc.data ? doc.data() : {};
+            return Object.assign({}, data, { id: doc.id });
+        }
+
+        function replaceStateFromFirestore(snapshot, collectionName) {
+            const docs = snapshot.docs.map(normalizeDoc);
+            const key = collectionName;
+            if (key === 'products') appState.products = docs;
+            if (key === 'sales') appState.sales = docs;
+            if (key === 'udhar') appState.udhar = docs;
+            if (key === 'expenses') appState.expenses = docs;
+            saveState();
+            renderAll();
+        }
+
+        function subscribeToCollection(collectionName) {
+            const unsubscribe = db.collection(collectionName)
+                .onSnapshot(function (snapshot) {
+                    replaceStateFromFirestore(snapshot, collectionName);
+                    setSyncStatus('connected', 'Synced');
+                }, function (err) {
+                    console.warn('Firestore sync failed for ' + collectionName + '.', err);
+                    setSyncStatus('error', 'Sync unavailable');
+                });
+            syncUnsubscribers.push(unsubscribe);
+        }
+
+        function startAuthAndSync() {
+            firebase.auth().onAuthStateChanged(function (user) {
+                syncUnsubscribers.forEach(function (unsubscribe) { unsubscribe(); });
+                syncUnsubscribers = [];
+                if (!user) {
+                    appState = cloneState(DEFAULT_STATE);
+                    saveState();
+                    renderAll();
+                    $('authScreen').classList.remove('hidden');
+                    $('appViewportFrame').classList.add('hidden');
+                    $('signOutButton').classList.add('hidden');
+                    $('mobileSignOutButton').classList.add('hidden');
+                    $('shareButton').classList.add('hidden');
+                    $('mobileShareButton').classList.add('hidden');
+                    setSyncStatus('offline', 'Signed out');
+                    return;
+                }
+
+                if (!user.emailVerified) {
+                    $('authScreen').classList.remove('hidden');
+                    $('appViewportFrame').classList.add('hidden');
+                    $('signOutButton').classList.add('hidden');
+                    $('mobileSignOutButton').classList.add('hidden');
+                    $('shareButton').classList.add('hidden');
+                    $('mobileShareButton').classList.add('hidden');
+                    $('authError').textContent = 'Verify the email sent to ' + user.email + ', then sign in again.';
+                    $('authError').classList.remove('hidden');
+                    setSyncStatus('offline', 'Email not verified');
+                    return;
+                }
+
+                $('authScreen').classList.add('hidden');
+                $('appViewportFrame').classList.remove('hidden');
+                $('signOutButton').classList.remove('hidden');
+                $('mobileSignOutButton').classList.remove('hidden');
+                const owner = String(user.email).toLowerCase() === OWNER_EMAIL;
+                $('shareButton').classList.toggle('hidden', !owner);
+                $('mobileShareButton').classList.toggle('hidden', !owner);
+                setSyncStatus('syncing', 'Connecting...');
+                function startListeners() {
+                    ['products', 'sales', 'udhar', 'expenses'].forEach(subscribeToCollection);
+                }
+                runMigration(user.uid).then(startListeners).catch(function (err) {
+                    console.error('Migration failed.', err);
+                    setSyncStatus('error', 'Migration failed');
+                    toast('Local data could not be uploaded, but cloud data is still loading.', 'error');
+                    startListeners();
+                });
+            });
+        }
+
+        function readLegacyState() {
+            try {
+                return normalizeState(JSON.parse(localStorage.getItem(LEGACY_STORAGE_KEY) || 'null'));
+            } catch (err) {
+                console.warn('Legacy local data is unreadable and will not be migrated.', err);
+                return cloneState(DEFAULT_STATE);
+            }
+        }
+
+        function isLegacySampleState(state) {
+            const sampleProducts = [
+                ['p1', 'Pepsi 1.5 Litre Bottle', 130, 48, 10],
+                ['p2', 'Coca Cola 500ml', 65, 72, 15],
+                ['p3', 'Red Bull Energy Drink 250ml', 380, 18, 5],
+                ['p4', 'Gourmet Cola 1.5L', 90, 30, 10],
+                ['p5', 'Nestle Pure Life Water 1.5L', 60, 100, 20],
+                ['p6', 'Commercial Packaged Ice Bag', 100, 15, 5]
+            ];
+            if (state.products.length !== sampleProducts.length) return false;
+            const productsMatch = state.products.every(function (p, i) {
+                const sample = sampleProducts[i];
+                return p.id === sample[0] && p.name === sample[1] && Number(p.costPrice) === sample[2] &&
+                    Number(p.stock) === sample[3] && Number(p.minStock) === sample[4];
+            });
+            if (!productsMatch) return false;
+            const sale = state.sales[0];
+            const salesMatch = state.sales.length === 1 && sale.productId === 'p1' && sale.productName === 'Pepsi 1.5 Litre Bottle' &&
+                Number(sale.qty) === 2 && Number(sale.unitPrice) === 160 && Number(sale.totalPrice) === 320 &&
+                Number(sale.profit) === 60 && sale.payType === 'cash';
+            if (!salesMatch) return false;
+            const udhar = state.udhar[0];
+            const udharMatch = state.udhar.length === 1 && udhar.customerName === 'Rashid Khan' &&
+                udhar.customerPhone === '0300-1234567' && udhar.productName === 'Pepsi 1.5 Litre Bottle' &&
+                Number(udhar.qty) === 2 && Number(udhar.totalPrice) === 320 && udhar.status === 'unpaid';
+            if (!udharMatch) return false;
+            const expense = state.expenses[0];
+            return state.expenses.length === 1 && expense.title === 'Daily Ice Block' &&
+                Number(expense.amount) === 300 && expense.note === 'Cooling drink crates';
+        }
+
+        function stateHasData(state) {
+            return ['products', 'sales', 'udhar', 'expenses'].some(function (key) {
+                return state[key].length > 0;
+            });
+        }
+
+        function runMigration(userId) {
+            if (migrationInProgress) return migrationInProgress;
+            let migrationDecision = null;
+            try { migrationDecision = localStorage.getItem(MIGRATION_DECISION_KEY); } catch (err) {}
+            if (migrationDecision === 'migrated' || migrationDecision === 'skipped') return Promise.resolve();
+            const legacyState = readLegacyState();
+            const shouldMigrate = stateHasData(legacyState) && !isLegacySampleState(legacyState);
+
+            if (!shouldMigrate) {
+                try { localStorage.setItem(MIGRATION_DECISION_KEY, 'not-applicable'); } catch (err) {}
+                return Promise.resolve();
+            }
+
+            migrationInProgress = db.runTransaction(function (transaction) {
+                const migrationRef = db.collection('migrations').doc('legacy-local-v3');
+                const collectionReads = ['products', 'sales', 'udhar', 'expenses'].map(function (name) {
+                    return transaction.get(db.collection(name).limit(1));
+                });
+                return Promise.all([transaction.get(migrationRef)].concat(collectionReads)).then(function (results) {
+                    if (results[0].exists) return false;
+                    const cloudHasData = results.slice(1).some(function (snapshot) { return !snapshot.empty; });
+                    if (cloudHasData) {
+                        transaction.set(migrationRef, {
+                            version: MIGRATION_VERSION,
+                            completedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                            outcome: 'skipped-cloud-data-exists',
+                            migratedBy: userId
+                        });
+                        return false;
+                    }
+
+                    const touched = [];
+                    ['products', 'sales', 'udhar', 'expenses'].forEach(function (collectionName) {
+                        if (!legacyState[collectionName].length) return;
+                        touched.push(collectionName);
+                        legacyState[collectionName].forEach(function (item) {
+                            const id = String(item.id || db.collection(collectionName).doc().id);
+                            transaction.set(db.collection(collectionName).doc(id), Object.assign({}, item, {
+                                id: id,
+                                ownerId: userId,
+                                migratedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                                migrationVersion: MIGRATION_VERSION
+                            }));
+                        });
+                    });
+
+                    transaction.set(migrationRef, {
+                        version: MIGRATION_VERSION,
+                        completedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                        outcome: 'migrated',
+                        migratedBy: userId,
+                        migratedCollections: touched,
+                        counts: {
+                            products: legacyState.products.length,
+                            sales: legacyState.sales.length,
+                            udhar: legacyState.udhar.length,
+                            expenses: legacyState.expenses.length
+                        }
+                    });
+                    return true;
+                });
+            }).then(function (migrated) {
+                try { localStorage.setItem(MIGRATION_DECISION_KEY, migrated ? 'migrated' : 'skipped'); } catch (err) {}
+                if (!migrated) toast('Cloud data already exists. This browser’s older local data was kept as a backup but was not uploaded.', 'info');
+                migrationInProgress = null;
+            }).catch(function (err) {
+                migrationInProgress = null;
+                throw err;
+            });
+            return migrationInProgress;
         }
 
         function emptyState(icon, text) {
@@ -929,11 +1229,19 @@
         function markUdharPaid(id) {
             const u = appState.udhar.find(function (x) { return x.id === id; });
             if (!u) return;
-            u.status = 'cleared';
-            u.clearedDate = getTodayIso();
-            saveState();
-            toast('Udhar cleared for ' + u.customerName);
-            renderAll();
+            db.collection('udhar').doc(id).update({
+                status: 'cleared',
+                clearedDate: getTodayIso()
+            }).then(function () {
+                u.status = 'cleared';
+                u.clearedDate = getTodayIso();
+                saveState();
+                toast('Udhar cleared for ' + u.customerName);
+                renderAll();
+            }).catch(function (err) {
+                console.error('Udhar update failed.', err);
+                toast('Could not clear Udhar. Please try again.', 'error');
+            });
         }
 
         /* ============================================================
@@ -1073,28 +1381,57 @@
 
             const total = qty * price;
             const cost = Number(p.costPrice) || 0;
-
-            appState.sales.unshift({
-                id: uid('s'), productId: p.id, productName: p.name, qty: qty, unitPrice: price,
+            const user = firebase.auth().currentUser;
+            if (!user) { toast('Sign in to save this sale.', 'error'); return; }
+            const saleId = db.collection('sales').doc().id;
+            const sale = {
+                id: saleId, ownerId: user.uid, productId: p.id, productName: p.name, qty: qty, unitPrice: price,
                 costPrice: cost, totalPrice: total, profit: (price - cost) * qty,
                 payType: selectedPayType, date: getTodayIso(), timestamp: new Date().toISOString()
-            });
-            p.stock = Math.max(0, Number(p.stock) - qty);
+            };
+            const udhar = selectedPayType === 'udhar' ? {
+                id: db.collection('udhar').doc().id,
+                ownerId: user.uid,
+                customerName: $('udharCustomerName').value.trim(),
+                customerPhone: $('udharCustomerPhone').value.trim(),
+                customerAddress: $('udharCustomerAddress').value.trim(),
+                productName: p.name, qty: qty, totalPrice: total, status: 'unpaid', date: getTodayIso()
+            } : null;
 
-            if (selectedPayType === 'udhar') {
-                appState.udhar.unshift({
-                    id: uid('u'),
-                    customerName: $('udharCustomerName').value.trim(),
-                    customerPhone: $('udharCustomerPhone').value.trim(),
-                    customerAddress: $('udharCustomerAddress').value.trim(),
-                    productName: p.name, qty: qty, totalPrice: total, status: 'unpaid', date: getTodayIso()
+            const button = e.submitter || $('saleForm').querySelector('button[type="submit"]');
+            if (button) button.disabled = true;
+            db.runTransaction(function (transaction) {
+                return transaction.get(db.collection('products').doc(p.id)).then(function (snapshot) {
+                    if (!snapshot.exists) throw new Error('Product not found');
+                    const current = snapshot.data();
+                    if ((Number(current.stock) || 0) < qty) throw new Error('Insufficient stock');
+                    const currentName = String(current.name || p.name);
+                    const currentCost = Number(current.costPrice) || 0;
+                    sale.productName = currentName;
+                    sale.costPrice = currentCost;
+                    sale.profit = (price - currentCost) * qty;
+                    if (udhar) udhar.productName = currentName;
+                    transaction.update(db.collection('products').doc(p.id), {
+                        stock: firebase.firestore.FieldValue.increment(-qty)
+                    });
+                    transaction.set(db.collection('sales').doc(saleId), sale);
+                    if (udhar) transaction.set(db.collection('udhar').doc(udhar.id), udhar);
                 });
-            }
-
-            saveState();
-            closeModal('saleModal');
-            toast('Sale recorded — ' + formatPKR(total));
-            renderAll();
+            }).then(function () {
+                appState.sales.unshift(sale);
+                if (udhar) appState.udhar.unshift(udhar);
+                const productIndex = appState.products.findIndex(function (item) { return item.id === p.id; });
+                if (productIndex !== -1) appState.products[productIndex].stock = Math.max(0, Number(appState.products[productIndex].stock) - qty);
+                saveState();
+                closeModal('saleModal');
+                toast('Sale recorded — ' + formatPKR(total));
+                renderAll();
+            }).catch(function (err) {
+                console.error('Sale transaction failed.', err);
+                toast(err.message === 'Insufficient stock' ? 'Stock changed before the sale could be saved.' : 'Could not record sale. Please try again.', 'error');
+            }).finally(function () {
+                if (button) button.disabled = false;
+            });
         }
 
         /* ============================================================
@@ -1126,18 +1463,56 @@
             const stock = Math.max(0, parseInt($('prodStock').value, 10) || 0);
             const min = Math.max(1, parseInt($('prodMinStock').value, 10) || 5);
             if (!name) { toast('Product name is required.', 'error'); return; }
+            const user = firebase.auth().currentUser;
+            if (!user) { toast('Sign in to save products.', 'error'); return; }
+            const button = e.submitter || $('productForm').querySelector('button[type="submit"]');
+            if (button) button.disabled = true;
+            setSyncStatus('syncing', 'Saving...');
 
+            let saveOperation;
             if (editId) {
-                const p = appState.products.find(function (x) { return x.id === editId; });
-                if (p) { p.name = name; p.costPrice = cost; p.stock = stock; p.minStock = min; }
-                toast('Product updated.');
+                const existing = appState.products.find(function (x) { return x.id === editId; });
+                const originalStock = existing ? Number(existing.stock) || 0 : stock;
+                const stockDelta = stock - originalStock;
+                saveOperation = db.runTransaction(function (transaction) {
+                    const productRef = db.collection('products').doc(editId);
+                    return transaction.get(productRef).then(function (snapshot) {
+                        if (!snapshot.exists) throw new Error('Product not found');
+                        const updates = {
+                            name: name,
+                            costPrice: cost,
+                            minStock: min,
+                            stock: stockDelta === 0
+                                ? (Number(snapshot.data().stock) || 0)
+                                : firebase.firestore.FieldValue.increment(stockDelta)
+                        };
+                        transaction.update(productRef, updates);
+                    });
+                }).then(function () { toast('Product updated.'); });
             } else {
-                appState.products.push({ id: uid('p'), name: name, costPrice: cost, stock: stock, minStock: min });
-                toast('Product added.');
+                const productId = db.collection('products').doc().id;
+                saveOperation = db.collection('products').doc(productId).set({
+                    id: productId,
+                    ownerId: user.uid,
+                    name: name,
+                    costPrice: cost,
+                    stock: stock,
+                    minStock: min
+                }).then(function () { toast('Product added.'); });
             }
-            saveState();
-            closeModal('productModal');
-            renderAll();
+
+            saveOperation.then(function () {
+                saveState();
+                closeModal('productModal');
+                renderAll();
+                setSyncStatus('connected', 'Saved');
+            }).catch(function (err) {
+                console.error('Product save failed.', err);
+                setSyncStatus('error', 'Save failed');
+                toast('Could not save product. Please try again.', 'error');
+            }).finally(function () {
+                if (button) button.disabled = false;
+            });
         }
 
         /* ============================================================
@@ -1160,12 +1535,36 @@
             const qty = parseInt($('restockAddQty').value, 10);
             if (!qty || qty < 1) { toast('Enter a valid quantity.', 'error'); return; }
             const newCost = $('restockNewCost').value;
-            p.stock = Number(p.stock) + qty;
-            if (newCost !== '' && Number(newCost) >= 0) p.costPrice = Number(newCost);
-            saveState();
-            closeModal('restockModal');
-            toast('Restocked ' + qty + ' × ' + p.name);
-            renderAll();
+            const user = firebase.auth().currentUser;
+            if (!user) { toast('Sign in to restock products.', 'error'); return; }
+            const updates = { stock: firebase.firestore.FieldValue.increment(qty) };
+            if (newCost !== '' && Number(newCost) >= 0) updates.costPrice = Number(newCost);
+            const button = e.submitter || $('restockForm').querySelector('button[type="submit"]');
+            if (button) button.disabled = true;
+            db.runTransaction(function (transaction) {
+                return transaction.get(db.collection('products').doc(p.id)).then(function (snapshot) {
+                    if (!snapshot.exists) throw new Error('Product not found');
+                    const productUpdates = Object.assign({}, updates);
+                    if (updates.costPrice !== undefined && Number(snapshot.data().costPrice) !== updates.costPrice) {
+                        productUpdates.costPrice = updates.costPrice;
+                    } else {
+                        delete productUpdates.costPrice;
+                    }
+                    transaction.update(db.collection('products').doc(p.id), productUpdates);
+                });
+            }).then(function () {
+                p.stock = Number(p.stock) + qty;
+                if (newCost !== '' && Number(newCost) >= 0) p.costPrice = Number(newCost);
+                saveState();
+                closeModal('restockModal');
+                toast('Restocked ' + qty + ' × ' + p.name);
+                renderAll();
+            }).catch(function (err) {
+                console.error('Restock transaction failed.', err);
+                toast('Could not restock product. Please try again.', 'error');
+            }).finally(function () {
+                if (button) button.disabled = false;
+            });
         }
 
         /* ============================================================
@@ -1182,16 +1581,66 @@
             const amount = Number($('expAmount').value);
             if (!title) { toast('Expense title is required.', 'error'); return; }
             if (!(amount > 0)) { toast('Enter a valid amount.', 'error'); return; }
-            appState.expenses.unshift({ id: uid('e'), title: title, amount: amount, note: $('expNote').value.trim(), date: getTodayIso() });
-            saveState();
-            closeModal('expenseModal');
-            toast('Expense saved — ' + formatPKR(amount));
-            renderAll();
+            const user = firebase.auth().currentUser;
+            if (!user) { toast('Sign in to save expenses.', 'error'); return; }
+            const expense = {
+                id: db.collection('expenses').doc().id,
+                ownerId: user.uid,
+                title: title,
+                amount: amount,
+                note: $('expNote').value.trim(),
+                date: getTodayIso()
+            };
+            db.collection('expenses').doc(expense.id).set(expense).then(function () {
+                appState.expenses.unshift(expense);
+                saveState();
+                closeModal('expenseModal');
+                toast('Expense saved — ' + formatPKR(amount));
+                renderAll();
+            }).catch(function (err) {
+                console.error('Expense save failed.', err);
+                toast('Could not save expense. Please try again.', 'error');
+            });
         }
 
         /* ============================================================
            BACKUP / RESTORE
         ============================================================ */
+        function openShareModal() {
+            if (!isOwnerUser()) { toast('Only the owner can share cloud access.', 'error'); return; }
+            $('shareForm').reset();
+            openModal('shareModal');
+        }
+
+        function isOwnerUser() {
+            const user = firebase.auth().currentUser;
+            return !!user && user.emailVerified && String(user.email).toLowerCase() === OWNER_EMAIL;
+        }
+
+        function handleShareSubmit(e) {
+            e.preventDefault();
+            if (!isOwnerUser()) { toast('Only the owner can share cloud access.', 'error'); return; }
+            const email = $('shareEmail').value.trim().toLowerCase();
+            if (!email) { toast('Enter your brother’s account email.', 'error'); return; }
+            const button = e.submitter || $('shareForm').querySelector('button[type="submit"]');
+            if (button) button.disabled = true;
+            setSyncStatus('syncing', 'Sharing...');
+            db.collection('allowedUsers').doc(email).set({
+                email: email,
+                addedAt: firebase.firestore.FieldValue.serverTimestamp()
+            }).then(function () {
+                closeModal('shareModal');
+                setSyncStatus('connected', 'Access shared');
+                toast('Access granted for ' + email + '.');
+            }).catch(function (err) {
+                console.error('Sharing failed.', err);
+                setSyncStatus('error', 'Share failed');
+                toast('Could not share access. Please try again.', 'error');
+            }).finally(function () {
+                if (button) button.disabled = false;
+            });
+        }
+
         function openBackupModal() { openModal('backupModal'); }
 
         function exportDataJSON() {
@@ -1211,22 +1660,67 @@
             const fileInput = $('importFile');
             const file = fileInput.files && fileInput.files[0];
             if (!file) { toast('Choose a backup file first.', 'error'); return; }
+            const user = firebase.auth().currentUser;
+            if (!user) { toast('Sign in before restoring data.', 'error'); return; }
             const reader = new FileReader();
             reader.onload = function () {
                 try {
                     const parsed = JSON.parse(reader.result);
                     if (!parsed || !Array.isArray(parsed.products)) throw new Error('bad format');
-                    askConfirm('Restore Backup?', 'This will replace ALL current data with the backup file. Continue?', function () {
-                        appState = {
-                            products: parsed.products || [],
-                            sales: parsed.sales || [],
-                            udhar: parsed.udhar || [],
-                            expenses: parsed.expenses || []
-                        };
-                        saveState();
-                        closeModal('backupModal');
-                        renderAll();
-                        toast('Data restored successfully.');
+                    askConfirm('Restore Backup?', 'This will replace ALL current cloud data with the backup file. Continue?', function () {
+                        const restored = normalizeState(parsed);
+                        setSyncStatus('syncing', 'Restoring...');
+                        Promise.all(['products', 'sales', 'udhar', 'expenses'].map(function (collectionName) {
+                            return db.collection(collectionName).get();
+                        })).then(function (snapshots) {
+                            const operations = [];
+
+                            snapshots.forEach(function (snapshot) {
+                                snapshot.forEach(function (doc) {
+                                    operations.push({ type: 'delete', ref: doc.ref });
+                                });
+                            });
+
+                            ['products', 'sales', 'udhar', 'expenses'].forEach(function (collectionName) {
+                                restored[collectionName].forEach(function (item) {
+                                    const id = String(item.id || db.collection(collectionName).doc().id);
+                                    operations.push({
+                                        type: 'set',
+                                        ref: db.collection(collectionName).doc(id),
+                                        data: Object.assign({}, item, {
+                                            id: id,
+                                            ownerId: user.uid,
+                                            restoredAt: firebase.firestore.FieldValue.serverTimestamp()
+                                        })
+                                    });
+                                });
+                            });
+
+                            const batchCommits = [];
+                            for (let i = 0; i < operations.length; i += 400) {
+                                const batch = db.batch();
+                                operations.slice(i, i + 400).forEach(function (operation) {
+                                    if (operation.type === 'delete') batch.delete(operation.ref);
+                                    else batch.set(operation.ref, operation.data);
+                                });
+                                batchCommits.push(batch.commit());
+                            }
+
+                            return batchCommits.reduce(function (chain, commit) {
+                                return chain.then(function () { return commit; });
+                            }, Promise.resolve());
+                        }).then(function () {
+                            appState = restored;
+                            saveState();
+                            closeModal('backupModal');
+                            renderAll();
+                            setSyncStatus('connected', 'Restore complete');
+                            toast('Data restored successfully.');
+                        }).catch(function (err) {
+                            console.error('Restore failed.', err);
+                            setSyncStatus('error', 'Restore failed');
+                            toast('Could not restore data. Please try again.', 'error');
+                        });
                     });
                 } catch (err) {
                     toast('Invalid backup file.', 'error');
@@ -1240,26 +1734,46 @@
         ============================================================ */
         function confirmDeleteProduct(id) {
             askConfirm('Delete Product?', 'This removes the product and its stock. Past sales history stays intact.', function () {
-                appState.products = appState.products.filter(function (p) { return p.id !== id; });
-                saveState(); toast('Product deleted.', 'info'); renderAll();
+                db.collection('products').doc(id).delete().then(function () {
+                    appState.products = appState.products.filter(function (p) { return p.id !== id; });
+                    saveState(); toast('Product deleted.', 'info'); renderAll();
+                }).catch(function (err) {
+                    console.error('Product delete failed.', err);
+                    toast('Could not delete product. Please try again.', 'error');
+                });
             });
         }
         function confirmDeleteSale(id) {
             askConfirm('Delete Sale?', 'Removes this entry from the sales log. Stock is not restored.', function () {
-                appState.sales = appState.sales.filter(function (s) { return s.id !== id; });
-                saveState(); toast('Sale entry deleted.', 'info'); renderAll();
+                db.collection('sales').doc(id).delete().then(function () {
+                    appState.sales = appState.sales.filter(function (s) { return s.id !== id; });
+                    saveState(); toast('Sale entry deleted.', 'info'); renderAll();
+                }).catch(function (err) {
+                    console.error('Sale delete failed.', err);
+                    toast('Could not delete sale. Please try again.', 'error');
+                });
             });
         }
         function confirmDeleteUdhar(id) {
             askConfirm('Delete Udhar Entry?', 'This record will be permanently removed.', function () {
-                appState.udhar = appState.udhar.filter(function (u) { return u.id !== id; });
-                saveState(); toast('Udhar entry deleted.', 'info'); renderAll();
+                db.collection('udhar').doc(id).delete().then(function () {
+                    appState.udhar = appState.udhar.filter(function (u) { return u.id !== id; });
+                    saveState(); toast('Udhar entry deleted.', 'info'); renderAll();
+                }).catch(function (err) {
+                    console.error('Udhar delete failed.', err);
+                    toast('Could not delete Udhar entry. Please try again.', 'error');
+                });
             });
         }
         function confirmDeleteExpense(id) {
             askConfirm('Delete Expense?', 'This record will be permanently removed.', function () {
-                appState.expenses = appState.expenses.filter(function (x) { return x.id !== id; });
-                saveState(); toast('Expense deleted.', 'info'); renderAll();
+                db.collection('expenses').doc(id).delete().then(function () {
+                    appState.expenses = appState.expenses.filter(function (x) { return x.id !== id; });
+                    saveState(); toast('Expense deleted.', 'info'); renderAll();
+                }).catch(function (err) {
+                    console.error('Expense delete failed.', err);
+                    toast('Could not delete expense. Please try again.', 'error');
+                });
             });
         }
 
@@ -1293,8 +1807,57 @@
             renderReports();
         }
 
+        function handleAuthSubmit(e) {
+            e.preventDefault();
+            const email = $('authEmail').value.trim();
+            const password = $('authPassword').value;
+            const authError = $('authError');
+            const creatingAccount = authMode === 'signup';
+            authError.classList.add('hidden');
+            $('authSubmitButton').disabled = true;
+            const persistence = $('authPersist').checked
+                ? firebase.auth.Auth.Persistence.LOCAL
+                : firebase.auth.Auth.Persistence.SESSION;
+            setSyncStatus('syncing', creatingAccount ? 'Creating account...' : 'Signing in...');
+            firebase.auth().setPersistence(persistence).then(function () {
+                if (!creatingAccount) return firebase.auth().signInWithEmailAndPassword(email, password);
+                return firebase.auth().createUserWithEmailAndPassword(email, password).then(function (credential) {
+                    return credential.user.sendEmailVerification().then(function () {
+                        return firebase.auth().signOut();
+                    });
+                }).then(function () {
+                    authError.textContent = 'Account created. Verify the email we sent you, then sign in.';
+                    authError.classList.remove('hidden');
+                });
+            }).catch(function (err) {
+                authError.textContent = err.message;
+                authError.classList.remove('hidden');
+                setSyncStatus('error', 'Authentication failed');
+            }).finally(function () {
+                $('authSubmitButton').disabled = false;
+            });
+        }
+
+        function toggleAuthMode() {
+            authMode = authMode === 'signup' ? 'signin' : 'signup';
+            const signingUp = authMode === 'signup';
+            $('authTitle').textContent = signingUp ? 'Create Account' : 'Sign In';
+            $('authSubmitButton').textContent = signingUp ? 'Create Account' : 'Sign In';
+            $('authModeButton').textContent = signingUp ? 'Back to Sign In' : 'Create Account';
+            $('authPassword').setAttribute('autocomplete', signingUp ? 'new-password' : 'current-password');
+            $('authError').classList.add('hidden');
+        }
+
+        function signOutUser() {
+            firebase.auth().signOut().catch(function (err) {
+                console.error('Sign out failed.', err);
+                toast('Could not sign out. Please try again.', 'error');
+            });
+        }
+
         switchTab('inventory');
         renderAll();
+        startAuthAndSync();
     </script>
 </body>
 </html>
